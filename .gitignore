@@ -1,0 +1,32 @@
+# macOS metadata
+.DS_Store
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+
+# Test, coverage, lint, and type-checker output
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Python build and packaging output
+build/
+dist/
+*.egg-info/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# IDE-specific local settings
+.idea/
+.vscode/
