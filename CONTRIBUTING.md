@@ -36,8 +36,13 @@ subject alone.
 - Separate the body from the subject with a blank line.
 - Explain why the change is needed and its important effects; do not merely
   list changed files.
+- For a large commit that implements several tracked tasks, summarize the main
+  outcomes with concise bullets instead of copying every task or changed file.
 - Wrap lines at approximately 72 characters where practical.
 - Put issue references at the end, for example `Refs #42` or `Closes #42`.
+- When work is tracked in a repository task document, put its exact path at the
+  end under `Task reference:`. Reference only work implemented by the commit;
+  do not imply that every task in the document is complete.
 - Clearly call out a breaking change and how users should adapt to it.
 
 Examples:
@@ -51,6 +56,21 @@ Use integer cents for monetary calculations
 
 Binary floating-point arithmetic can introduce fractional-cent errors.
 Integer cents keep allocation and remainder distribution deterministic.
+```
+
+For a larger task-driven change:
+
+```text
+Set up Python project foundation
+
+Establish a reproducible baseline for MVP development.
+
+- Pin the supported Python and uv versions.
+- Configure packaging and automated quality checks.
+- Add CI and distribution smoke tests.
+
+Task reference:
+docs/versions/v0.1-mvp/tasks/01-project-setup.md
 ```
 
 Before committing, inspect exactly what is staged:
