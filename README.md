@@ -74,7 +74,9 @@ artifacts and the local `.venv` are intentionally excluded from Git.
 - `docs/ENGINEERING_TENETS.md`: engineering principles and rationale
 - `docs/versions/CURRENT`: active version directory
 - `docs/versions/<version>/requirements.md`: product behavior and scope
-- `docs/versions/<version>/technical-design.md`: approved implementation design
+- `docs/versions/<version>/technical-design.md`: technical-design workstream
+  index
+- `docs/versions/<version>/technical-design/`: workstream-specific designs
 - `docs/versions/<version>/tasks/`: version workstreams
 
 To ask Codex to draft a commit message from the current Git changes, invoke the

@@ -9,7 +9,10 @@ Before modifying application code:
 
 - Read `docs/versions/CURRENT` to determine the active version directory.
 - Read `docs/versions/<active-version>/requirements.md`.
-- Read `docs/versions/<active-version>/technical-design.md`.
+- Read `docs/versions/<active-version>/technical-design.md` to identify the
+  applicable technical-design workstream.
+- Read the relevant file under
+  `docs/versions/<active-version>/technical-design/`.
 - Read `docs/ENGINEERING_TENETS.md`.
 - Read the relevant task file under
   `docs/versions/<active-version>/tasks/`.
@@ -22,6 +25,9 @@ not exist, stop and report the problem before changing application code.
 If these documents disagree, stop and describe the conflict before changing
 code. Requirements define product behavior; the technical design defines the
 approved implementation approach.
+
+Do not modify application code when its applicable technical-design workstream
+is missing or has any status other than `Approved`.
 
 ## Engineering Rules
 

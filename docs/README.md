@@ -19,8 +19,10 @@ v0.1-mvp
 When work moves to another version:
 
 1. Create the new directory under `docs/versions/`.
-2. Add and approve its requirements, technical design, tests, and task list.
-3. Change `docs/versions/CURRENT` to the new directory name in the same reviewed
+2. Add its requirements and technical-design workstream documents.
+3. Approve the relevant technical design before deriving its tests and task
+   list.
+4. Change `docs/versions/CURRENT` to the new directory name in the same reviewed
    change that activates the version.
 
 Do not select the active version by sorting directory names. Multiple versions
