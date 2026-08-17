@@ -1,0 +1,20 @@
+{
+  "restaurant_name": "Example Bistro",
+  "receipt_date": "2026-01-15",
+  "items": [
+    {
+      "name": "Vegetable Dumplings",
+      "quantity": 1,
+      "line_total": "12.00"
+    },
+    {
+      "name": "Noodles",
+      "quantity": 1,
+      "line_total": "18.00"
+    }
+  ],
+  "subtotal": "30.00",
+  "tax": "2.40",
+  "tip": "6.00",
+  "total": "38.40"
+}
