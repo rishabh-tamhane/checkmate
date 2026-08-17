@@ -60,6 +60,15 @@ approved implementation approach.
 - Update requirements or technical design before implementing a behavior that
   changes an approved product or architecture decision.
 
+## Commit Messages
+
+- Follow the commit-message standard in `CONTRIBUTING.md`.
+- Before suggesting a message, inspect the staged diff. If nothing is staged,
+  state that the suggestion is based on unstaged changes.
+- Do not use Conventional Commit prefixes such as `feat:`, `fix:`, or `chore:`.
+- Do not stage changes, create a commit, or push unless the user explicitly asks
+  for that action.
+
 ## Before Completing a Change
 
 For application-code or configuration changes, run:

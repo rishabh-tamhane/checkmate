@@ -1,0 +1,4 @@
+interface:
+  display_name: "Write Commit Message"
+  short_description: "Draft commit messages from repository changes"
+  default_prompt: "Use $write-commit-message to draft a commit message for my staged changes."
