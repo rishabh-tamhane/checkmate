@@ -13,6 +13,8 @@ Before modifying application code:
   applicable technical-design workstream.
 - Read the relevant file under
   `docs/versions/<active-version>/technical-design/`.
+- Read every detailed technical-design guide listed under `Design sources` in
+  the applicable milestone task file.
 - Read `docs/ENGINEERING_TENETS.md`.
 - Read the relevant task file under
   `docs/versions/<active-version>/tasks/`.

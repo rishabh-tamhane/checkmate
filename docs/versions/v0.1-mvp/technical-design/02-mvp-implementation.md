@@ -2,10 +2,12 @@
 
 ## Status
 
-Draft, complete proposal awaiting approval. This document has been reviewed
-against `../requirements.md` and resolves the implementation decisions needed
-to derive detailed tasks. Change this status to `Approved` only after the
-proposed design has been reviewed as a whole.
+Approved.
+
+Approval date: 2026-08-18.
+
+This document has been reviewed against `../requirements.md` and resolves the
+implementation decisions needed to derive detailed tasks.
 
 ## Design goals
 
@@ -16,11 +18,11 @@ proposed design has been reviewed as a whole.
   database, or external credentials.
 - Preserve reproducibility, privacy, and simple MVP architecture.
 
-Throughout this draft, **Proposed** marks a concrete decision awaiting approval.
+Throughout this document, **Approved** marks a reviewed design decision.
 
 ## System context and request flow
 
-**Proposed:** Deploy one stateless Python web process. It serves the initial
+**Approved:** Deploy one stateless Python web process. It serves the initial
 HTML page and versioned static assets, exposes JSON endpoints for calculation,
 accepts a multipart image upload for receipt extraction, and returns the final
 PDF as a download. There is no database, account, server-side draft session, or
@@ -69,7 +71,7 @@ does not promise a stable public API.
 
 ## Web framework and UI architecture
 
-**Proposed:** Use FastAPI for HTTP routing and boundary validation, Jinja2 for
+**Approved:** Use FastAPI for HTTP routing and boundary validation, Jinja2 for
 the initial HTML document, and one small vanilla ECMAScript module for editable
 browser state and DOM updates. Serve local CSS and JavaScript through the same
 application. Do not add a frontend package manager, bundler, SPA framework, or
@@ -121,7 +123,7 @@ Primary capability references:
 
 ## Module boundaries
 
-**Proposed:** Keep one installable `checkmate` package with four explicit
+**Approved:** Keep one installable `checkmate` package with four explicit
 layers. Start with this structure and split a module only when its current
 responsibilities require it:
 
@@ -178,7 +180,7 @@ domain functions use standard-library dataclasses and typed values.
 
 ## Domain model
 
-**Proposed:** Separate raw editable input from valid domain values. HTTP schemas
+**Approved:** Separate raw editable input from valid domain values. HTTP schemas
 accept user-editable strings so an incomplete field can be returned with a
 field-specific issue. Conversion creates domain values only after a field is
 valid; calculation never receives malformed money.
@@ -227,7 +229,7 @@ currency conversion. The v0.1 currency is therefore USD.
 
 ## Monetary and allocation policy
 
-**Proposed:** Represent all domain money as integer cents. Use `Decimal` only
+**Approved:** Represent all domain money as integer cents. Use `Decimal` only
 while parsing a boundary string into cents; never use binary floating point.
 The browser sends canonical decimal strings and renders server-formatted USD
 values.
@@ -293,7 +295,7 @@ because there is no meaningful finalized split to share.
 
 ## Receipt upload and extraction
 
-**Proposed:** Implement `ReceiptParser` with the OpenAI Responses API. Use the
+**Approved:** Implement `ReceiptParser` with the OpenAI Responses API. Use the
 dated `gpt-5.4-mini-2026-03-17` snapshot, image detail `original`, and Structured
 Outputs parsed into a private Pydantic provider schema. The model supports image
 input and Structured Outputs, and the dated snapshot prevents an alias update
@@ -384,7 +386,7 @@ Primary capability references:
 
 ## Editing, participants, and assignments
 
-**Proposed:** Keep one plain JavaScript `draft` object containing raw editable
+**Approved:** Keep one plain JavaScript `draft` object containing raw editable
 receipt strings, ordered item and participant records, and assignments keyed by
 opaque IDs. Generate IDs in the browser with `crypto.randomUUID()` for newly
 added records; extraction responses provide server-generated UUIDs. IDs are
@@ -438,7 +440,7 @@ or custom checkbox behavior.
 
 ## Validation and finalization
 
-**Proposed:** Use the domain validation service as the single source of truth
+**Approved:** Use the domain validation service as the single source of truth
 for calculation and finalization. Each issue has a stable machine code, a field
 path such as `receipt.items.<id>.line_total`, a user-facing message, and a
 severity of `error` or `warning`. Errors block finalization; warnings request
@@ -492,7 +494,7 @@ mismatch.
 
 ## PDF generation
 
-**Proposed:** Generate the PDF directly with ReportLab Platypus through a
+**Approved:** Generate the PDF directly with ReportLab Platypus through a
 `ReportLabPdfRenderer` adapter. ReportLab produces a simple PDF without a
 browser engine, native HTML-rendering libraries, subprocess, or temporary
 output file. Use only the built-in Helvetica font family so rendering does not
@@ -547,7 +549,7 @@ Primary capability references:
 
 ## Security and privacy
 
-**Proposed:** Treat image bytes, extracted text, restaurant details,
+**Approved:** Treat image bytes, extracted text, restaurant details,
 participant names, and provider responses as sensitive request data.
 
 - `OPENAI_API_KEY` is read from the process environment or deployment secret
@@ -597,7 +599,7 @@ Primary data-control reference:
 
 ## Testing strategy
 
-**Proposed:** Use a test pyramid with deterministic business tests at its base
+**Approved:** Use a test pyramid with deterministic business tests at its base
 and a small number of complete browser workflows. Normal CI must require no
 network, OpenAI credential, real receipt, database, or host-installed service.
 
@@ -645,11 +647,11 @@ Normal correctness tests continue to use the fake parser because probabilistic
 service output cannot be a normal release gate.
 
 The existing 90% line-coverage threshold remains a floor, not a substitute for
-behavioral assertions. `docs/versions/v0.1-mvp/tests.md` will map each acceptance
-criterion to its automated evidence when implementation tasks are derived.
-Before release, perform two manual checks that automation cannot fully judge:
-PDF visual legibility and overall clean/professional appearance on one desktop
-and one narrow mobile viewport.
+behavioral assertions. `docs/versions/v0.1-mvp/tests.md` maps each acceptance
+criterion to its planned evidence and will record the final evidence paths and
+statuses during implementation. Before release, perform two manual checks that
+automation cannot fully judge: PDF visual legibility and overall
+clean/professional appearance on one desktop and one narrow mobile viewport.
 
 Expected additional development dependencies are `httpx`, `pytest-asyncio`,
 `pytest-playwright`, `pypdf`, and `types-reportlab`. Playwright's pinned
@@ -661,7 +663,7 @@ Primary browser-test reference:
 
 ## Production runtime and delivery
 
-**Proposed:** Expose a `checkmate-web` console script that constructs the
+**Approved:** Expose a `checkmate-web` console script that constructs the
 FastAPI application and starts Uvicorn. Local development uses
 `uv run checkmate-web`; production uses the same installed entry point without
 reload. The process reads `HOST` (default `0.0.0.0`), `PORT` (default `8000`),

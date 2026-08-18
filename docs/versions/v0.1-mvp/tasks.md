@@ -5,8 +5,8 @@
 - [Project setup](tasks/01-project-setup.md)
   - Status: In progress
 - [MVP implementation](tasks/02-mvp-implementation.md)
-  - Status: Blocked by
-    [MVP implementation technical design](technical-design/02-mvp-implementation.md)
+  - Status: Ready; milestone 1 may begin
+  - Design approved on 2026-08-18
 
 ## Definition of Done
 

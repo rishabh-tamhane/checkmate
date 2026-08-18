@@ -9,8 +9,7 @@ workstream is implemented.
 - [Project setup](technical-design/01-project-setup.md)
   - Status: Established
 - [MVP implementation](technical-design/02-mvp-implementation.md)
-  - Status: Complete draft awaiting approval; implementation tasks remain
-    blocked
+  - Status: Approved on 2026-08-18
   - Detailed guides:
     - [System architecture](technical-design/02-mvp-implementation/01-system-architecture.md)
       - Status: Approved on 2026-08-18
@@ -19,13 +18,13 @@ workstream is implemented.
     - [Web workflow](technical-design/02-mvp-implementation/03-web-workflow.md)
       - Status: Approved on 2026-08-18
     - [Receipt extraction](technical-design/02-mvp-implementation/04-receipt-extraction.md)
-      - Status: Draft, awaiting review
+      - Status: Approved on 2026-08-18
     - [PDF export](technical-design/02-mvp-implementation/05-pdf-export.md)
-      - Status: Draft, awaiting review
+      - Status: Approved on 2026-08-18
     - [Security and privacy](technical-design/02-mvp-implementation/06-security-and-privacy.md)
-      - Status: Draft, awaiting review
+      - Status: Approved on 2026-08-18
     - [Runtime and testing](technical-design/02-mvp-implementation/07-runtime-and-testing.md)
-      - Status: Draft, awaiting review
+      - Status: Approved on 2026-08-18
 
 ## Design governance
 
@@ -41,7 +40,7 @@ workstream is implemented.
 
 ## Detailed-guide governance
 
-- The MVP implementation document remains the authoritative design proposal.
+- The MVP implementation document remains the authoritative design.
 - Its detailed guides explain the selected approach, provide worked examples,
   and identify implications for future implementation tasks.
 - Each guide records whether that design area has been reviewed and approved.

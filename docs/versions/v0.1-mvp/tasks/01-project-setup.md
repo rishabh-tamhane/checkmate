@@ -35,6 +35,10 @@ complete.
 
 ## Build and delivery
 
+The remaining production-container and health-check work is detailed in
+[MVP milestone 5](02-mvp-implementation/05-production-readiness.md) and remains
+tracked here as a project-setup completion gate.
+
 - [x] Configure wheel and source-distribution builds.
 - [x] Verify the wheel installs and imports in a clean environment.
 - [ ] Create a reproducible production container build.

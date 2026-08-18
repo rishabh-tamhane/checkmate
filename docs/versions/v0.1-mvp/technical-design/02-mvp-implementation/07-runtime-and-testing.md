@@ -2,7 +2,9 @@
 
 ## Status
 
-Draft, awaiting review.
+Approved.
+
+Approval date: 2026-08-18.
 
 ## Document role
 
@@ -328,8 +330,8 @@ Evidence is layered:
 | PDF appearance | Manual visual review |
 | Overall professional UI | Desktop and narrow manual review |
 
-`../../tests.md` should eventually map every acceptance criterion to its
-automated and manual evidence.
+`../../tests.md` maps every acceptance criterion to planned automated and manual
+evidence and records final paths and statuses during implementation.
 
 ## Hosting boundary
 
