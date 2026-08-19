@@ -53,13 +53,13 @@ def test_application_shell_links_to_local_assets() -> None:
 
 
 def test_application_starts_without_an_openai_key() -> None:
-    """Missing extraction configuration never makes the shell unhealthy."""
+    """Missing extraction configuration leaves manual entry healthy."""
     with application_client(Settings(openai_api_key=None)) as client:
         page = client.get("/")
         health = client.get("/health")
 
     assert page.status_code == 200
-    assert "Unavailable without configuration" in page.text
+    assert "Manual entry below is fully available" in " ".join(page.text.split())
     assert health.json()["status"] == "ok"
 
 
@@ -70,7 +70,7 @@ def test_foundation_does_not_enable_extraction_when_a_key_exists() -> None:
         page = client.get("/")
 
     assert page.status_code == 200
-    assert "Arrives in milestone 3" in page.text
+    assert "Automatic extraction arrives in milestone 3" in page.text
     assert secret not in page.text
 
 

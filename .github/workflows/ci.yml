@@ -37,6 +37,9 @@ jobs:
       - name: Install locked environment
         run: uv sync --locked --dev
 
+      - name: Install Playwright Chromium
+        run: uv run playwright install --with-deps chromium
+
       - name: Verify lockfile
         run: uv lock --check
 

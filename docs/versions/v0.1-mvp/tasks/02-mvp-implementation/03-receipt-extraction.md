@@ -2,7 +2,7 @@
 
 ## Status
 
-Blocked by milestone 2.
+Ready.
 
 ## Outcome
 

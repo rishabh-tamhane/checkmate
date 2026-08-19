@@ -2,7 +2,7 @@
 
 ## Status
 
-Blocked by milestone 2. May run in parallel with milestone 3.
+Ready. May run in parallel with milestone 3.
 
 ## Outcome
 

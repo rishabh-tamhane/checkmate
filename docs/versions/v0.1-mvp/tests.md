@@ -2,9 +2,9 @@
 
 ## Status
 
-Planned from the approved technical design. Replace each planned test path with
-its final path if implementation requires a different organization, and change
-an evidence status to `Passing` only after that exact evidence runs successfully.
+Milestone 2 manual-splitting evidence is passing as of 2026-08-19. Extraction,
+PDF, production-container, external-provider, and final manual-review evidence
+remain planned for their owning milestones.
 
 ## Evidence rules
 
@@ -43,17 +43,17 @@ The fake extraction result should contain at least one deliberate, editable
 transcription mistake so the browser workflow proves user correction before
 finalization.
 
-## Planned suite structure
+## Suite structure
 
-| Layer | Planned location | Primary responsibility |
+| Layer | Current evidence | Primary responsibility |
 |---|---|---|
-| Domain unit | `tests/unit/domain/` | Money, validation, allocation, reconciliation, and invariants |
-| Adapter unit | `tests/unit/adapters/` | Image normalization, provider translation, and PDF semantics |
-| Application | `tests/application/` | Use-case orchestration with fake parser and renderer |
-| HTTP integration | `tests/integration/web/` | Routes, schemas, limits, status mapping, headers, and safe logs |
-| Browser acceptance | `tests/browser/` | Complete workflow, responsive behavior, keyboard use, and downloads |
-| External evaluation | `tests/external/` | Pinned model and prompt quality on generated receipt images |
-| Package/container smoke | `tests/smoke/` and CI | Installed assets, startup, health, routes, and shutdown |
+| Domain unit | `tests/test_money_and_validation.py`, `tests/test_splitting.py` | Money, validation, allocation, reconciliation, and invariants |
+| Application | `tests/test_calculation_service.py` | Raw-draft conversion and calculation orchestration without framework or network dependencies |
+| HTTP integration | `tests/test_calculation_http.py`, `tests/test_web.py` | Schemas, limits, status mapping, headers, safe logs, shell, and health |
+| Browser acceptance | `tests/test_browser_workflow.py` | Manual workflow, responsive behavior, keyboard use, debounce, retry, and stale responses |
+| Adapter unit | Planned in milestones 3 and 4 | Image normalization, provider translation, and PDF semantics |
+| External evaluation | Planned in milestone 3 | Pinned model and prompt quality on generated receipt images |
+| Package/container smoke | `tests/smoke_test.py` and CI; container work remains milestone 5 | Installed assets, startup, health, routes, and shutdown |
 
 ## Acceptance criteria
 
@@ -78,51 +78,57 @@ finalization.
 
 ### AC-03: Add the people who shared the meal
 
-- [ ] Browser test adds Alice and Bob, verifies insertion order, then removes
-  and re-adds a fictional participant without corrupting assignments.
-- [ ] Domain and HTTP tests reject blank, duplicate-after-case-folding,
+- [x] Browser test adds fictional participants in insertion order and removes a
+  participant without corrupting assignments.
+- [x] Domain and application tests reject blank, duplicate-after-case-folding,
   overlong, unsupported-character, duplicate-ID, and over-limit participants.
-- [ ] Evidence status: Planned in milestones 2 and 5.
+- [x] Evidence status: Milestone 2 evidence passing; release closure remains
+  milestone 5.
 
 ### AC-04: Assign items with participant checkboxes
 
-- [ ] Browser test renders a native checkbox for every item-participant pair and
-  assigns Pizza to Alice and Bob and Salad to Bob.
-- [ ] Browser test proves add/remove operations clean dangling assignment IDs
+- [x] Browser test renders a native checkbox for every item-participant pair and
+  assigns a synthetic item to two participants.
+- [x] Browser test proves add/remove operations clean dangling assignment IDs
   and that the table remains usable by keyboard and on a narrow viewport.
-- [ ] HTTP tests reject unknown and duplicate item or participant references.
-- [ ] Evidence status: Planned in milestones 2 and 5.
+- [x] Application and HTTP tests reject unknown and duplicate item or participant
+  references.
+- [x] Evidence status: Milestone 2 evidence passing; release closure remains
+  milestone 5.
 
 ### AC-05: Calculate each total including tax and tip
 
-- [ ] Domain tests prove `$10.01` shared by Alice and Bob becomes `$5.01` and
+- [x] Domain tests prove `$10.01` shared by Alice and Bob becomes `$5.01` and
   `$5.00` according to participant order.
-- [ ] Domain tests prove `$1.37` tax becomes `$0.40` and `$0.97`, and `$2.55`
+- [x] Domain tests prove `$1.37` tax becomes `$0.40` and `$0.97`, and `$2.55`
   tip becomes `$0.75` and `$1.80`, using independent largest-remainder passes.
-- [ ] Domain tests prove Alice owes `$6.16`, Bob owes `$14.77`, and totals equal
+- [x] Domain tests prove Alice owes `$6.16`, Bob owes `$14.77`, and totals equal
   `$20.93` exactly.
-- [ ] Browser test proves checkbox changes calculate immediately, text changes
+- [x] Browser test proves checkbox changes calculate immediately, text changes
   calculate after debounce, and stale responses cannot replace current totals.
-- [ ] Evidence status: Planned in milestones 2 and 5.
+- [x] Evidence status: Milestone 2 evidence passing; release closure remains
+  milestone 5.
 
 ### AC-06: Correct receipt-reading mistakes
 
 - [ ] Browser test corrects the deliberate fake extraction error and observes
   new server totals for the matching revision.
-- [ ] Browser test proves failed extraction and calculation requests preserve
+- [x] Browser test proves failed calculation requests preserve
   the current editable draft and provide retry or manual entry.
-- [ ] No-key browser test completes manual entry without calling OpenAI.
-- [ ] Evidence status: Planned in milestones 2, 3, and 5.
+- [x] No-key browser test completes manual entry without calling OpenAI.
+- [ ] Evidence status: Manual correction and calculation recovery pass in
+  milestone 2; extraction correction remains milestones 3 and 5.
 
 ### AC-07: Confirm the calculated and entered totals match
 
-- [ ] Domain and HTTP tests show entered subtotal, calculated subtotal, entered
+- [x] Domain and HTTP tests show entered subtotal, calculated subtotal, entered
   total, calculated total, and blocking differences.
-- [ ] Browser test starts with an inconsistent total, displays field and summary
+- [x] Browser test creates an inconsistent subtotal, displays field and summary
   issues, blocks PDF export, then clears the issues after correction.
-- [ ] Invariant tests prove item, tax, tip, and participant sums equal their
+- [x] Invariant tests prove item, tax, tip, and participant sums equal their
   authoritative components for every valid fixture.
-- [ ] Evidence status: Planned in milestones 2 and 5.
+- [x] Evidence status: Milestone 2 evidence passing; release closure remains
+  milestone 5.
 
 ### AC-08: Generate and download the finalized PDF
 

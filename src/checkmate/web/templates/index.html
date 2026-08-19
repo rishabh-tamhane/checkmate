@@ -23,50 +23,181 @@
     <main class="page-shell">
       <section class="intro" aria-labelledby="page-title">
         <p class="eyebrow">Restaurant receipt splitting</p>
-        <h1 id="page-title">Everyone pays for what they shared.</h1>
+        <h1 id="page-title">Split each item with the people who shared it.</h1>
         <p class="lede">
-          Checkmate turns one restaurant receipt into a clear, item-by-item
-          split. The application foundation is ready; the editable splitting
-          workflow is the next milestone.
+          Enter the receipt, add participants, and assign each item. Checkmate
+          calculates every share, including proportional tax and tip.
         </p>
       </section>
 
-      <section
-        class="status-panel"
-        aria-labelledby="status-title"
-        data-application-status
-      >
+      <section class="upload-panel" aria-labelledby="upload-title">
         <div>
-          <p class="eyebrow">Application status</p>
-          <h2 id="status-title">Foundation online</h2>
+          <h2 id="upload-title">Receipt image</h2>
+          <p class="supporting-text">
+            Automatic extraction arrives in milestone 3. Manual entry below is
+            fully available without an OpenAI key.
+          </p>
+          <p class="privacy-note">
+            When enabled, receipt images will be sent to OpenAI for extraction.
+            Review every extracted field and upload restaurant receipts only—not
+            health, identity, or regulated financial documents.
+          </p>
         </div>
-        <dl class="status-list">
-          <div>
-            <dt>Web process</dt>
-            <dd><span class="status-dot" aria-hidden="true"></span>Healthy</dd>
-          </div>
-          <div>
-            <dt>Manual entry</dt>
-            <dd>Arrives in milestone 2</dd>
-          </div>
-          <div>
-            <dt>Receipt extraction</dt>
-            <dd>
-              {% if automatic_extraction_available %}
-                Available
-              {% elif api_key_configured %}
-                Arrives in milestone 3
-              {% else %}
-                Unavailable without configuration
-              {% endif %}
-            </dd>
-          </div>
-        </dl>
+        <button type="button" disabled aria-describedby="upload-unavailable">
+          Upload receipt
+        </button>
+        <span id="upload-unavailable" class="visually-hidden">
+          Automatic receipt extraction is not available yet.
+        </span>
       </section>
+
+      <div
+        class="error-summary"
+        data-error-summary
+        tabindex="-1"
+        role="alert"
+        hidden
+      >
+        <h2>Check these fields</h2>
+        <ul data-error-list></ul>
+      </div>
+
+      <section class="receipt-details" aria-labelledby="receipt-details-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Step 1</p>
+            <h2 id="receipt-details-title">Receipt details</h2>
+          </div>
+          <p>Restaurant and date are optional.</p>
+        </div>
+        <div class="form-grid">
+          <div class="field field-wide">
+            <label for="restaurant-name">Restaurant name</label>
+            <input id="restaurant-name" type="text" maxlength="200" data-receipt-field="restaurantName">
+          </div>
+          <div class="field">
+            <label for="receipt-date">Receipt date</label>
+            <input id="receipt-date" type="date" data-receipt-field="date">
+          </div>
+        </div>
+      </section>
+
+      <section class="participants-panel" aria-labelledby="participants-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Step 2</p>
+            <h2 id="participants-title">Participants</h2>
+          </div>
+          <button type="button" class="secondary-button" data-add-participant>
+            Add participant
+          </button>
+        </div>
+        <p class="empty-state" data-participants-empty>
+          Add everyone who shared the meal.
+        </p>
+        <div class="participant-list" data-participant-list></div>
+      </section>
+
+      <div class="workflow-layout">
+        <section class="receipt-panel" aria-labelledby="items-title">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Step 3</p>
+              <h2 id="items-title">Items and assignments</h2>
+            </div>
+            <button type="button" class="secondary-button" data-add-item>
+              Add item
+            </button>
+          </div>
+
+          <div class="table-scroll" data-table-scroll tabindex="0">
+            <table class="receipt-table">
+              <caption>
+                Receipt items with one assignment checkbox for each participant
+              </caption>
+              <thead data-receipt-head></thead>
+              <tbody data-receipt-body></tbody>
+            </table>
+          </div>
+
+          <div class="receipt-totals" aria-label="Entered receipt totals">
+            <div class="field money-field">
+              <label for="receipt-subtotal">Subtotal</label>
+              <span class="money-prefix" aria-hidden="true">$</span>
+              <input id="receipt-subtotal" inputmode="decimal" data-receipt-field="subtotal">
+            </div>
+            <div class="field money-field">
+              <label for="receipt-tax">Tax</label>
+              <span class="money-prefix" aria-hidden="true">$</span>
+              <input id="receipt-tax" inputmode="decimal" data-receipt-field="tax">
+            </div>
+            <div class="field money-field">
+              <label for="receipt-tip">Tip</label>
+              <span class="money-prefix" aria-hidden="true">$</span>
+              <input id="receipt-tip" inputmode="decimal" data-receipt-field="tip">
+            </div>
+            <div class="field money-field total-field">
+              <label for="receipt-total">Total</label>
+              <span class="money-prefix" aria-hidden="true">$</span>
+              <input id="receipt-total" inputmode="decimal" data-receipt-field="total">
+            </div>
+          </div>
+        </section>
+
+        <aside class="summary-panel" aria-labelledby="summary-title" aria-live="polite">
+          <div class="section-heading summary-heading">
+            <div>
+              <p class="eyebrow">Step 4</p>
+              <h2 id="summary-title">Split summary</h2>
+            </div>
+            <span class="calculation-status" data-calculation-status>Pending</span>
+          </div>
+
+          <div class="reconciliation" data-reconciliation>
+            <h3>Receipt reconciliation</h3>
+            <dl>
+              <div><dt>Entered subtotal</dt><dd data-entered-subtotal>Blank</dd></div>
+              <div><dt>Calculated subtotal</dt><dd data-calculated-subtotal>Unavailable</dd></div>
+              <div><dt>Difference</dt><dd data-subtotal-difference>Unavailable</dd></div>
+              <div><dt>Entered total</dt><dd data-entered-total>Blank</dd></div>
+              <div><dt>Calculated total</dt><dd data-calculated-total>Unavailable</dd></div>
+              <div><dt>Difference</dt><dd data-total-difference>Unavailable</dd></div>
+            </dl>
+          </div>
+
+          <div class="summary-table-scroll">
+            <table class="summary-table">
+              <caption>Amount owed by each participant</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Person</th>
+                  <th scope="col">Items</th>
+                  <th scope="col">Tax</th>
+                  <th scope="col">Tip</th>
+                  <th scope="col">Total</th>
+                </tr>
+              </thead>
+              <tbody data-summary-body></tbody>
+            </table>
+          </div>
+          <p class="empty-state" data-summary-empty>
+            Add valid receipt details and assignments to see the split.
+          </p>
+          <button type="button" class="secondary-button retry-button" data-retry hidden>
+            Retry calculation
+          </button>
+          <button type="button" class="primary-button" data-generate-pdf disabled>
+            Generate PDF
+          </button>
+          <p class="supporting-text" data-pdf-note>
+            Complete a valid non-zero split to enable PDF export.
+          </p>
+        </aside>
+      </div>
     </main>
 
     <footer class="site-footer">
-      <p>No accounts, saved drafts, or receipt storage.</p>
+      <p>No accounts, saved drafts, browser storage, or receipt history.</p>
     </footer>
   </body>
 </html>
