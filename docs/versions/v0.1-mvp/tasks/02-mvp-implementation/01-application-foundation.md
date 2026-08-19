@@ -2,7 +2,9 @@
 
 ## Status
 
-Ready.
+Complete.
+
+Completion date: 2026-08-18.
 
 ## Outcome
 
@@ -28,86 +30,100 @@ integration-test foundation are established before business features are added.
 
 ## Runtime dependencies
 
-- [ ] **M1-01:** Add `fastapi`, `pydantic`, `jinja2`, and `uvicorn` with
+- [x] **M1-01:** Add `fastapi`, `pydantic`, `jinja2`, and `uvicorn` with
   `uv add`; commit the resulting `pyproject.toml` and `uv.lock` changes.
-- [ ] **M1-02:** Add `httpx` as a development dependency with `uv add --dev`
+- [x] **M1-02:** Add `httpx` as a development dependency with `uv add --dev`
   for ASGI HTTP integration tests.
-- [ ] **M1-03:** Confirm no dependency required only by extraction, PDF export,
+- [x] **M1-03:** Confirm no dependency required only by extraction, PDF export,
   browser automation, or a hypothetical future feature is added here.
 
 ## Package boundaries
 
-- [ ] **M1-04:** Create `domain`, `application`, `adapters`, and `web` packages
+- [x] **M1-04:** Create `domain`, `application`, `adapters`, and `web` packages
   under `src/checkmate/`, retaining `config.py` at the package root.
-- [ ] **M1-05:** Add the approved module skeleton for domain models, money,
+- [x] **M1-05:** Add the approved module skeleton for domain models, money,
   splitting, validation, application models, ports, services, web schemas, and
   the application composition root.
-- [ ] **M1-06:** Keep the domain package limited to standard-library imports and
+- [x] **M1-06:** Keep the domain package limited to standard-library imports and
   prevent FastAPI, Pydantic, OpenAI, ReportLab, and browser concerns from
   entering it.
-- [ ] **M1-07:** Define narrow placeholder boundaries for external adapters
+- [x] **M1-07:** Define narrow placeholder boundaries for external adapters
   without finalizing receipt-parser or PDF-renderer data contracts ahead of
   their milestones.
-- [ ] **M1-08:** Centralize construction of configuration, services, and concrete
+- [x] **M1-08:** Centralize construction of configuration, services, and concrete
   adapters in `web.app`; do not create hidden module-level service locators.
 
 ## Configuration and process entry point
 
-- [ ] **M1-09:** Implement typed startup configuration for `HOST`, `PORT`,
+- [x] **M1-09:** Implement typed startup configuration for `HOST`, `PORT`,
   `LOG_LEVEL`, and optional `OPENAI_API_KEY` without logging secret values.
-- [ ] **M1-10:** Apply defaults `0.0.0.0`, `8000`, and `info`, and reject an
+- [x] **M1-10:** Apply defaults `0.0.0.0`, `8000`, and `info`, and reject an
   invalid port or unsupported log level with a safe startup error.
-- [ ] **M1-11:** Add the `checkmate-web` console script to `pyproject.toml` and
+- [x] **M1-11:** Add the `checkmate-web` console script to `pyproject.toml` and
   start one Uvicorn process without development reload.
-- [ ] **M1-12:** Provide an application factory or equivalent composition
+- [x] **M1-12:** Provide an application factory or equivalent composition
   function that tests can call with controlled dependencies.
-- [ ] **M1-13:** Start successfully without `OPENAI_API_KEY`; automatic
+- [x] **M1-13:** Start successfully without `OPENAI_API_KEY`; automatic
   extraction remains unavailable until milestone 3 while the web process stays
   healthy.
-- [ ] **M1-14:** Keep proxy-header trust disabled by default; require a later
+- [x] **M1-14:** Keep proxy-header trust disabled by default; require a later
   hosting decision to supply exact trusted proxy addresses before enabling it.
 
 ## Initial HTTP application
 
-- [ ] **M1-15:** Implement `GET /health` returning exactly
+- [x] **M1-15:** Implement `GET /health` returning exactly
   `{"status": "ok", "version": "0.1.0"}` without calling an external service.
-- [ ] **M1-16:** Implement `GET /` with a Jinja-rendered semantic HTML shell and
+- [x] **M1-16:** Implement `GET /` with a Jinja-rendered semantic HTML shell and
   links to local versioned CSS and JavaScript assets.
-- [ ] **M1-17:** Mount the static asset route through the same FastAPI
+- [x] **M1-17:** Mount the static asset route through the same FastAPI
   application; do not use a CDN or frontend package manager.
-- [ ] **M1-18:** Include templates and static assets as wheel package data so an
+- [x] **M1-18:** Include templates and static assets as wheel package data so an
   installed distribution does not depend on the source checkout.
-- [ ] **M1-19:** Add a single safe error envelope containing a stable code,
+- [x] **M1-19:** Add a single safe error envelope containing a stable code,
   user-facing message, and generated request ID for unexpected HTTP failures.
-- [ ] **M1-20:** Add request metadata logging for request ID, route, status, and
+- [x] **M1-20:** Add request metadata logging for request ID, route, status, and
   duration; exclude bodies, query values, secrets, and user data.
-- [ ] **M1-21:** Add baseline response headers for same-origin content policy,
+- [x] **M1-21:** Add baseline response headers for same-origin content policy,
   content-type sniffing protection, referrer suppression, and framing denial.
 
 ## Verification
 
-- [ ] **M1-22:** Unit-test configuration defaults, valid overrides, invalid
+- [x] **M1-22:** Unit-test configuration defaults, valid overrides, invalid
   startup values, and absence of secret values in errors and logs.
-- [ ] **M1-23:** Integration-test `GET /health`, including its exact schema,
+- [x] **M1-23:** Integration-test `GET /health`, including its exact schema,
   version, content type, and independence from external services.
-- [ ] **M1-24:** Integration-test `GET /` and every linked local asset from the
+- [x] **M1-24:** Integration-test `GET /` and every linked local asset from the
   application factory.
-- [ ] **M1-25:** Build the wheel, install it in an isolated environment, run the
+- [x] **M1-25:** Build the wheel, install it in an isolated environment, run the
   installed `checkmate-web` entry point, and verify `/`, its assets, and
   `/health` without using files from the checkout.
-- [ ] **M1-26:** Verify imports follow `web -> application -> domain` and that
+- [x] **M1-26:** Verify imports follow `web -> application -> domain` and that
   vendor objects do not cross adapter boundaries.
-- [ ] **M1-27:** Document the local start command, configuration variables, and
+- [x] **M1-27:** Document the local start command, configuration variables, and
   manual-entry behavior in the root README without adding deployment-provider
   instructions.
-- [ ] **M1-28:** Run all required repository checks from `AGENTS.md` and record
+- [x] **M1-28:** Run all required repository checks from `AGENTS.md` and record
   any deliberately deferred container check against milestone 5.
 
 ## Completion criteria
 
-- [ ] `uv run checkmate-web` starts the installed application.
-- [ ] `/`, every required local asset, and `/health` respond successfully.
-- [ ] The application starts without an OpenAI credential.
-- [ ] Focused configuration, route, logging, header, and package-data tests pass.
-- [ ] No business calculation, external provider, PDF implementation,
+- [x] `uv run checkmate-web` starts the installed application.
+- [x] `/`, every required local asset, and `/health` respond successfully.
+- [x] The application starts without an OpenAI credential.
+- [x] Focused configuration, route, logging, header, and package-data tests pass.
+- [x] No business calculation, external provider, PDF implementation,
   persistence, or unapproved dependency has been introduced.
+
+## Verification evidence
+
+- Configuration behavior: `tests/test_config.py`
+- Package direction and vendor-boundary checks: `tests/test_architecture.py`
+- Route, asset, security-header, logging, and entry-point behavior:
+  `tests/test_web.py`
+- Isolated wheel and source-distribution startup, route, asset, health, and
+  shutdown checks: `tests/smoke_test.py`
+- On 2026-08-18, `uv lock --check`, Ruff lint and format, mypy, pytest, and
+  `uv build` all passed; pytest ran 20 tests with 100% line coverage.
+- Production-container construction and container smoke testing remain
+  deliberately deferred to
+  [milestone 5](05-production-readiness.md), tasks M5-16 through M5-28.

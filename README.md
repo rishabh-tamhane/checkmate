@@ -9,9 +9,10 @@ The planned workflow is:
 Upload receipt -> Review and edit -> Assign people -> Calculate split -> Generate PDF
 ```
 
-The application is currently in project setup. Product requirements and design
-documents are under `docs/versions/`; `docs/versions/CURRENT` identifies the
-active version.
+The application foundation is now under development. It provides the installed
+web entry point, application shell, and health endpoint. Product requirements
+and design documents are under `docs/versions/`; `docs/versions/CURRENT`
+identifies the active version.
 
 ## Prerequisites
 
@@ -49,6 +50,37 @@ Run commands through `uv` so that they use the project environment:
 ```bash
 uv run python -c "import checkmate; print(checkmate.__version__)"
 ```
+
+## Run the web application
+
+Start the same installed entry point used by the production runtime:
+
+```bash
+uv run checkmate-web
+```
+
+Open `http://127.0.0.1:8000/` for the application shell or request
+`http://127.0.0.1:8000/health` for process health. The entry point runs one
+Uvicorn process without development reload or forwarded-header trust.
+
+The process reads these environment variables at startup:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `HOST` | `0.0.0.0` | Listening interface |
+| `PORT` | `8000` | Listening TCP port |
+| `LOG_LEVEL` | `info` | `critical`, `error`, `warning`, `info`, `debug`, or `trace` |
+| `OPENAI_API_KEY` | absent | Reserved for milestone 3 receipt extraction |
+
+An invalid host, port, or log level stops startup with a safe configuration
+message. `OPENAI_API_KEY` is optional and must be supplied only through the
+process environment or a deployment secret store; it is never rendered or
+logged.
+
+The current foundation intentionally serves only the shell and health route.
+Manual receipt entry and deterministic splitting arrive in milestone 2, and
+automatic extraction arrives in milestone 3. A missing OpenAI key never stops
+the web process or health endpoint.
 
 ## Verification
 

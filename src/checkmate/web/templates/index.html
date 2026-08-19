@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Split a restaurant receipt by item.">
+    <title>Checkmate · Split a receipt by item</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', path='/checkmate.v1.css') }}"
+    >
+    <script
+      type="module"
+      src="{{ url_for('static', path='/checkmate.v1.js') }}"
+    ></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="Checkmate home">Checkmate</a>
+      <span class="version">v{{ application_version }}</span>
+    </header>
+
+    <main class="page-shell">
+      <section class="intro" aria-labelledby="page-title">
+        <p class="eyebrow">Restaurant receipt splitting</p>
+        <h1 id="page-title">Everyone pays for what they shared.</h1>
+        <p class="lede">
+          Checkmate turns one restaurant receipt into a clear, item-by-item
+          split. The application foundation is ready; the editable splitting
+          workflow is the next milestone.
+        </p>
+      </section>
+
+      <section
+        class="status-panel"
+        aria-labelledby="status-title"
+        data-application-status
+      >
+        <div>
+          <p class="eyebrow">Application status</p>
+          <h2 id="status-title">Foundation online</h2>
+        </div>
+        <dl class="status-list">
+          <div>
+            <dt>Web process</dt>
+            <dd><span class="status-dot" aria-hidden="true"></span>Healthy</dd>
+          </div>
+          <div>
+            <dt>Manual entry</dt>
+            <dd>Arrives in milestone 2</dd>
+          </div>
+          <div>
+            <dt>Receipt extraction</dt>
+            <dd>
+              {% if automatic_extraction_available %}
+                Available
+              {% elif api_key_configured %}
+                Arrives in milestone 3
+              {% else %}
+                Unavailable without configuration
+              {% endif %}
+            </dd>
+          </div>
+        </dl>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>No accounts, saved drafts, or receipt storage.</p>
+    </footer>
+  </body>
+</html>

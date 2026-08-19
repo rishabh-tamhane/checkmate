@@ -5,7 +5,7 @@
 - [Project setup](tasks/01-project-setup.md)
   - Status: In progress
 - [MVP implementation](tasks/02-mvp-implementation.md)
-  - Status: Ready; milestone 1 may begin
+  - Status: In progress; milestone 1 complete and milestone 2 ready
   - Design approved on 2026-08-18
 
 ## Definition of Done

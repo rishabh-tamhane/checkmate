@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready for implementation. The
+In progress. Milestone 1 is complete and milestone 2 is ready. The
 [MVP implementation technical design](../technical-design/02-mvp-implementation.md)
 and all detailed guides were approved on 2026-08-18.
 
