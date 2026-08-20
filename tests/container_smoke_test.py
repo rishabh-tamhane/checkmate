@@ -139,7 +139,12 @@ def _wait_until_ready(base_url: str) -> None:
             assert status == 200
             assert json.loads(body) == {"status": "ok", "version": "0.1.0"}
             return
-        except urllib.error.URLError, TimeoutError, http.client.HTTPException:
+        except (
+            ConnectionError,
+            urllib.error.URLError,
+            TimeoutError,
+            http.client.HTTPException,
+        ):
             if time.monotonic() >= deadline:
                 raise AssertionError("Container did not become healthy.") from None
             time.sleep(0.1)
