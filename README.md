@@ -3,7 +3,7 @@
 Checkmate is an MVP web application for splitting a restaurant receipt based on
 the items each person consumed.
 
-The planned workflow is:
+The workflow is:
 
 ```text
 Upload receipt -> Review and edit -> Assign people -> Calculate split -> Generate PDF
@@ -11,15 +11,15 @@ Upload receipt -> Review and edit -> Assign people -> Calculate split -> Generat
 
 The application provides editable receipt fields, optional receipt-image
 extraction, ordered participants, checkbox assignments, cent-exact tax and tip
-allocation, reconciliation, and actionable validation. PDF generation is the
-next product milestone. Product requirements and design documents are under
-`docs/versions/`; `docs/versions/CURRENT` identifies the active version.
+allocation, reconciliation, actionable validation, and PDF download. Product
+requirements and design documents are under `docs/versions/`;
+`docs/versions/CURRENT` identifies the active version.
 
 ## Prerequisites
 
 - Git
 - `uv` 0.11.32
-- Docker, once the production container is defined
+- Docker Desktop or another Docker engine with Buildx, for the production image
 
 Install the pinned `uv` version on macOS or Linux using its official standalone
 installer:
@@ -85,11 +85,68 @@ process environment or a deployment secret store; it is never rendered or
 logged.
 
 Manual entry and deterministic splitting work without an OpenAI key. To enable
-the receipt upload for the current terminal, set `OPENAI_API_KEY` in the process
-environment before starting Checkmate:
+receipt upload, create a project API key in the
+[OpenAI API key dashboard](https://platform.openai.com/api-keys) and supply it
+to Checkmate as `OPENAI_API_KEY`. A ChatGPT subscription and API billing are
+separate; the API project must have usable credits or billing configured.
+
+### Configure the OpenAI API key
+
+For a session-only setup on macOS or Linux, use a hidden prompt so the key is
+not written literally into shell history:
 
 ```bash
-export OPENAI_API_KEY="your-key"
+printf "Paste the full OpenAI API key: "
+IFS= read -r -s OPENAI_API_KEY
+printf "\n"
+export OPENAI_API_KEY
+```
+
+The value applies only to the current terminal and to processes started from
+it. Verify the credential without printing it:
+
+```bash
+curl --silent --show-error \
+  --output /dev/null \
+  --write-out 'HTTP %{http_code}\n' \
+  https://api.openai.com/v1/models \
+  --header "Authorization: Bearer $OPENAI_API_KEY"
+```
+
+`HTTP 200` confirms authentication. `HTTP 401` means the supplied value is not
+an accepted API key; create a new key and copy its full value when it is first
+displayed. Never paste a key into an issue, chat, log, or browser form.
+
+On macOS, the login Keychain can retain a verified key between terminal
+sessions. First complete the hidden-prompt setup above and confirm `HTTP 200`,
+then store that exact environment value:
+
+```bash
+security add-generic-password \
+  -a "$USER" \
+  -s "checkmate-openai-api-key" \
+  -U \
+  -w "$OPENAI_API_KEY"
+```
+
+Load it in each new terminal before starting Checkmate:
+
+```bash
+export OPENAI_API_KEY="$(security find-generic-password \
+  -a "$USER" \
+  -s "checkmate-openai-api-key" \
+  -w)"
+```
+
+Confirm that Keychain returned a value without displaying the secret:
+
+```bash
+test -n "$OPENAI_API_KEY" && echo "OpenAI API key loaded"
+```
+
+Then start the local process:
+
+```bash
 uv run checkmate-web
 ```
 
@@ -102,6 +159,17 @@ Drafts exist only in the current browser page and disappear on refresh. The
 server creates no application-managed receipt files and does not store receipt
 or participant data. A missing key or provider failure never stops manual
 calculation, the web process, or the health endpoint.
+
+### Public deployment prerequisites
+
+The application container is only one part of a safe public deployment. Before
+exposing Checkmate to the internet, the selected ingress and hosting platform
+must provide HTTPS and HSTS, enforce the same 10 MiB upload and 256 KiB JSON
+body limits, rate-limit receipt extraction, cap per-instance and fleet request
+concurrency, and configure only the exact trusted proxy addresses. Configure
+OpenAI usage budgets or alerts as an independent cost control. These controls
+are deployment requirements; v0.1 does not select or configure a cloud host,
+domain, TLS provider, or public ingress.
 
 ## Verification
 
@@ -119,6 +187,75 @@ uv build
 
 The build command creates a wheel and source distribution under `dist/`. Build
 artifacts and the local `.venv` are intentionally excluded from Git.
+
+### Production container
+
+Run the following commands from the repository root, where `Dockerfile` is
+located. An activated Python or Conda environment does not affect the Docker
+build. When copying an example, copy only the command inside its code block,
+not the Markdown fence markers. Make sure Docker Desktop or another Docker
+engine is running:
+
+```bash
+docker version
+docker buildx version
+```
+
+Build the tested Linux/amd64 production image from the pinned Python and uv
+base-image digests. `--load` makes the completed image available to the local
+Docker engine:
+
+```bash
+docker buildx build \
+  --platform linux/amd64 \
+  --load \
+  --tag checkmate:local \
+  .
+```
+
+Run the complete image inspection, read-only-filesystem, startup, route, asset,
+manual-calculation, PDF, no-key, and shutdown smoke contract:
+
+```bash
+uv run python tests/container_smoke_test.py checkmate:local
+```
+
+To keep the application running for manual use:
+
+```bash
+docker run --rm \
+  --name checkmate-local \
+  --platform linux/amd64 \
+  --read-only \
+  --tmpfs /tmp:rw,noexec,nosuid,size=16m \
+  --publish 127.0.0.1:8000:8000 \
+  --env OPENAI_API_KEY \
+  checkmate:local
+```
+
+The `--env OPENAI_API_KEY` option passes the variable already loaded in the
+current terminal at container startup; it does not bake the secret into the
+image. Omit that option to test manual-entry mode without automatic receipt
+extraction.
+
+Keep the terminal running and open `http://127.0.0.1:8000/`. From a second
+terminal, confirm that the container is healthy:
+
+```bash
+curl http://127.0.0.1:8000/health
+```
+
+Stop the container with `Control-C`. This release is verified only for
+Linux/amd64; on Apple silicon, Docker Desktop runs this image through amd64
+emulation. Another architecture needs its own successful build and smoke
+evidence.
+
+If Docker reports that `checkmate:local` does not exist, the build did not
+finish or was not loaded; rerun the build command and wait for a successful
+completion. If port 8000 is already allocated, stop the existing local server
+or container before retrying. If the page says extraction is unavailable,
+verify that the key is loaded in the same terminal and recreate the container;
+a running container cannot inherit later environment changes.
 
 ### Browser tests
 
@@ -179,7 +316,8 @@ The calculation status should become **Ready**. Maya should owe `$6.51`, Alex
 should owe `$6.50`, and the participant totals should add up to `$13.01`.
 Changing the subtotal to `9.00` should display a reconciliation error and
 disable **Generate PDF**. Correcting it to `10.01` should clear the error and
-enable the button again. PDF generation itself is implemented in milestone 4.
+enable the button again. Selecting **Generate PDF** should download the
+completed split summary.
 
 Stop the local server by returning to its terminal and pressing `Control-C`.
 

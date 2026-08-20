@@ -1,0 +1,7 @@
+# Send only the files required to build the installed production package.
+**
+!pyproject.toml
+!uv.lock
+!README.md
+!src/
+!src/**

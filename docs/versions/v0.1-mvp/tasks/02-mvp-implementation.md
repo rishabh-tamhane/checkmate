@@ -2,11 +2,13 @@
 
 ## Status
 
-In progress. Milestones 1 and 2 are complete. Milestone 3 has deterministic
-implementation and evidence but awaits its real-provider evaluation. Milestone
-4 is ready. The
+In progress. Milestones 1, 2, and 4 are complete. Milestone 3 has deterministic
+implementation and evidence but its real-provider evaluation is deferred.
+Owner-directed milestone 5 work that is independent of that evaluation is in
+progress; M5-32 and release completion remain blocked by milestone 3. The
 [MVP implementation technical design](../technical-design/02-mvp-implementation.md)
-and all detailed guides were approved on 2026-08-18.
+and all detailed guides are approved; the latest amendment was approved on
+2026-08-19.
 
 ## Execution rules
 
@@ -30,12 +32,14 @@ and all detailed guides were approved on 2026-08-18.
 | 1 | [Application foundation](02-mvp-implementation/01-application-foundation.md) | Complete | The installed package starts one stateless web process and serves its shell and health endpoint. |
 | 2 | [Manual splitting workflow](02-mvp-implementation/02-manual-splitting-workflow.md) | Complete | A user can manually enter, validate, assign, and calculate an exact split. |
 | 3 | [Receipt extraction](02-mvp-implementation/03-receipt-extraction.md) | In progress: external evaluation pending | A user can upload a safe image and receive editable extracted receipt data. |
-| 4 | [PDF export](02-mvp-implementation/04-pdf-export.md) | Ready | A valid split can be downloaded as a complete, readable PDF. |
-| 5 | [Production readiness](02-mvp-implementation/05-production-readiness.md) | Blocked by milestones 3 and 4 | The complete MVP passes release checks and runs from its production image. |
+| 4 | [PDF export](02-mvp-implementation/04-pdf-export.md) | Complete | A valid split can be downloaded as a complete, readable PDF. |
+| 5 | [Production readiness](02-mvp-implementation/05-production-readiness.md) | In progress; live-provider release gate deferred | The complete MVP passes release checks and runs from its production image. |
 
 Milestones 3 and 4 may be developed in parallel after milestone 2 because both
 depend on the same finalized calculation contract and neither depends on the
-other. Milestone 5 begins only after both are complete.
+other. By owner direction, milestone 5 work independent of live-provider
+evidence may proceed while M3-35 is deferred, but neither M5-32 nor milestone 5
+completion may be checked until the external evaluation passes.
 
 ## Design coverage
 

@@ -9,7 +9,7 @@ workstream is implemented.
 - [Project setup](technical-design/01-project-setup.md)
   - Status: Established
 - [MVP implementation](technical-design/02-mvp-implementation.md)
-  - Status: Approved on 2026-08-18
+  - Status: Approved on 2026-08-19
   - Detailed guides:
     - [System architecture](technical-design/02-mvp-implementation/01-system-architecture.md)
       - Status: Approved on 2026-08-18
@@ -18,7 +18,7 @@ workstream is implemented.
     - [Web workflow](technical-design/02-mvp-implementation/03-web-workflow.md)
       - Status: Approved on 2026-08-18
     - [Receipt extraction](technical-design/02-mvp-implementation/04-receipt-extraction.md)
-      - Status: Approved on 2026-08-18
+      - Status: Approved on 2026-08-19
     - [PDF export](technical-design/02-mvp-implementation/05-pdf-export.md)
       - Status: Approved on 2026-08-18
     - [Security and privacy](technical-design/02-mvp-implementation/06-security-and-privacy.md)

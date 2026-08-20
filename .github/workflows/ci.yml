@@ -63,3 +63,9 @@ jobs:
 
       - name: Smoke test source distribution
         run: uv run --isolated --no-project --with dist/*.tar.gz tests/smoke_test.py
+
+      - name: Build Linux/amd64 production image
+        run: docker buildx build --platform linux/amd64 --load --tag checkmate:ci .
+
+      - name: Smoke test production image
+        run: uv run python tests/container_smoke_test.py checkmate:ci

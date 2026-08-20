@@ -3,11 +3,12 @@
 ## Workstreams
 
 - [Project setup](tasks/01-project-setup.md)
-  - Status: In progress
+  - Status: Complete
 - [MVP implementation](tasks/02-mvp-implementation.md)
-  - Status: In progress; milestones 1 and 2 complete, milestone 3 awaiting its
-    external evaluation, and milestone 4 ready
-  - Design approved on 2026-08-18
+  - Status: In progress; milestones 1, 2, and 4 complete, milestone 3 awaiting
+    its deferred external evaluation, and independent milestone 5 work in
+    progress while release completion remains blocked by milestone 3
+  - Design approved on 2026-08-19
 
 ## Definition of Done
 

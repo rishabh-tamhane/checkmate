@@ -21,6 +21,7 @@ from starlette.datastructures import UploadFile
 from starlette.exceptions import HTTPException
 
 from checkmate import __version__
+from checkmate.adapters.pdf_renderer import ReportLabPdfRenderer
 from checkmate.adapters.receipt_parser import (
     EXTRACTION_PROMPT_VERSION,
     OPENAI_EXTRACTION_MODEL,
@@ -40,8 +41,16 @@ from checkmate.application.models import (
     RawReceiptItem,
     RawSplitDraft,
 )
-from checkmate.application.ports import ReceiptImageNormalizer, ReceiptParser
-from checkmate.application.services import calculate_draft
+from checkmate.application.ports import (
+    PdfRenderer,
+    ReceiptImageNormalizer,
+    ReceiptParser,
+)
+from checkmate.application.services import (
+    PdfExportService,
+    PdfRenderingError,
+    calculate_draft,
+)
 from checkmate.config import ConfigurationError, Settings
 from checkmate.domain.money import format_decimal, format_money, format_signed_cents
 from checkmate.web.schemas import (
@@ -70,6 +79,7 @@ TEMPLATE_DIRECTORY: Final = PACKAGE_DIRECTORY / "templates"
 STATIC_DIRECTORY: Final = PACKAGE_DIRECTORY / "static"
 HTTP_LOGGER: Final = logging.getLogger("checkmate.http")
 EXTRACTION_LOGGER: Final = logging.getLogger("checkmate.extraction")
+PDF_LOGGER: Final = logging.getLogger("checkmate.pdf")
 INTERNAL_ERROR_MESSAGE: Final = "Checkmate could not complete this request."
 JSON_BODY_LIMIT: Final = 256 * 1024
 SAME_ORIGIN_HEADER: Final = "X-Checkmate-Request"
@@ -92,6 +102,7 @@ def create_app(
     *,
     receipt_parser: ReceiptParser | None = None,
     image_normalizer: ReceiptImageNormalizer | None = None,
+    pdf_renderer: PdfRenderer | None = None,
 ) -> FastAPI:
     """Construct an isolated FastAPI application from validated settings."""
     if settings is None:
@@ -115,6 +126,7 @@ def create_app(
         if receipt_parser is not None
         else None
     )
+    pdf_export_service = PdfExportService(pdf_renderer or ReportLabPdfRenderer())
 
     @app.middleware("http")
     async def request_context(request: Request, call_next: RequestHandler) -> Response:
@@ -290,6 +302,61 @@ def create_app(
         return JSONResponse(
             content=response.model_dump(mode="json", by_alias=True),
             status_code=200,
+        )
+
+    @app.post(
+        "/api/splits/pdf",
+        summary="Generate a PDF from one independently finalized split draft",
+    )
+    async def generate_pdf(request: Request) -> Response:
+        origin_error = _same_origin_error(request)
+        if origin_error is not None:
+            return origin_error
+
+        body = await _read_limited_body(request, JSON_BODY_LIMIT)
+        if body is None:
+            return _safe_error_response(
+                request,
+                status_code=413,
+                code="request_too_large",
+                message="The PDF request must be 256 KiB or smaller.",
+            )
+        try:
+            pdf_request = CalculationRequest.model_validate_json(body)
+        except ValidationError:
+            return _safe_error_response(
+                request,
+                status_code=422,
+                code="invalid_request",
+                message="The PDF request does not match the required structure.",
+            )
+
+        try:
+            output = pdf_export_service.export(_to_raw_draft(pdf_request))
+        except PdfRenderingError:
+            PDF_LOGGER.error(
+                "pdf_render_failed request_id=%s error_category=renderer_failure",
+                request.state.request_id,
+            )
+            return _safe_error_response(
+                request,
+                status_code=500,
+                code="pdf_generation_failed",
+                message="Checkmate could not generate the PDF. Please try again.",
+            )
+
+        if output.content is None:
+            response = _to_calculation_response(output.calculation)
+            return JSONResponse(
+                content=response.model_dump(mode="json", by_alias=True),
+                status_code=422,
+            )
+        return Response(
+            content=output.content,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": ('attachment; filename="checkmate-split.pdf"'),
+            },
         )
 
     app.mount("/static", StaticFiles(directory=STATIC_DIRECTORY), name="static")

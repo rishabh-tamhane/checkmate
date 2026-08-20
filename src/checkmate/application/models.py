@@ -119,3 +119,11 @@ class CalculationOutput:
     def non_zero(self) -> bool:
         """Return whether the entered receipt has a non-zero total."""
         return self.normalized is not None and self.normalized.receipt.total.cents > 0
+
+
+@dataclass(frozen=True, slots=True)
+class PdfExportOutput:
+    """Independent finalization result and optional rendered PDF bytes."""
+
+    calculation: CalculationOutput
+    content: bytes | None

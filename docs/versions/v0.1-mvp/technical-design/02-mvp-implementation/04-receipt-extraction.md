@@ -4,7 +4,7 @@
 
 Approved.
 
-Approval date: 2026-08-18.
+Approval date: 2026-08-19.
 
 ## Document role
 
@@ -76,7 +76,8 @@ metadata in an HTTP request.
 The filename and declared media type are untrusted hints. A file named
 `receipt.jpg` could contain unrelated or malicious bytes. Pillow must decode
 the content successfully as one of the explicitly accepted formats: JPEG, PNG,
-or WebP.
+or WebP. This includes the narrow iPhone MPO/JPEG compatibility case described
+below.
 
 ### Size enforcement
 
@@ -103,9 +104,9 @@ Uploaded bytes
     |
     | decode only JPEG, PNG, or WebP
     v
-Decoded single-frame image
+Decoded single-frame image or approved MPO primary frame
     |
-    | reject decompression bombs and animation
+    | reject decompression bombs and every other multi-frame image
     v
 Apply EXIF orientation
     |
@@ -129,6 +130,25 @@ provider should receive the same orientation the user saw.
 Re-encoding removes source EXIF, XMP, comments, filename information, and other
 metadata that are unnecessary for transcription. It also gives the adapter one
 known media type and color representation.
+
+### iPhone MPO/JPEG compatibility
+
+Some iPhones write a file with a normal JPEG signature and `.JPG` extension but
+include an MPO index plus auxiliary image data. Pillow correctly identifies
+that container as `MPO`, reports multiple frames, and therefore caused the
+previous blanket multi-frame check to reject an otherwise valid receipt photo.
+
+This case is accepted only when the encoded content has a JPEG signature and
+Pillow identifies it as MPO. The normalizer explicitly selects frame zero,
+checks that primary frame against the 25-megapixel limit, and fully decodes only
+that frame. It does not seek, decode, combine, or transmit any auxiliary frame.
+The 10 MiB encoded-size limit still bounds the complete uploaded container.
+
+The selected frame follows the normal orientation, RGB conversion, resizing,
+and JPEG re-encoding pipeline. Re-encoding omits the MPO index and all source
+metadata, so the provider receives one metadata-free JPEG. Animated PNG/WebP
+and every other multi-frame input remain rejected. This compatibility rule does
+not create a general multi-photo upload feature.
 
 The original upload and normalized bytes live only for the request. They are
 not written to an application-managed receipt directory.
@@ -283,7 +303,8 @@ A practical extraction milestone is:
 1. Define application-owned normalized-image and extraction-result models.
 2. Define `ReceiptParser` and a deterministic fake.
 3. Implement bounded upload reading and format rejection.
-4. Implement safe Pillow decode and normalization.
+4. Implement safe Pillow decode and normalization, including primary-frame-only
+   handling for the approved iPhone MPO/JPEG compatibility case.
 5. Define the private provider schema and prompt version.
 6. Implement the OpenAI adapter with timeout, retry, and semaphore behavior.
 7. Map failures to safe application and HTTP errors.
@@ -296,6 +317,8 @@ A practical extraction milestone is:
 - Is the filename or declared media type ever trusted as proof of format?
 - Are both encoded size and decoded dimensions bounded?
 - Is source metadata removed during normalization?
+- Does an iPhone MPO/JPEG contribute only its primary frame while every other
+  multi-frame input remains rejected?
 - Can provider output bypass ordinary domain validation?
 - Are SDK types contained inside the adapter?
 - Are timeout, retry, and concurrency policies explicit?

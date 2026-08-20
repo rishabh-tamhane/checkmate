@@ -1,6 +1,7 @@
 const DEBOUNCE_MILLISECONDS = 300;
 const CALCULATION_ENDPOINT = "/api/splits/calculate";
 const EXTRACTION_ENDPOINT = "/api/receipts/extract";
+const PDF_ENDPOINT = "/api/splits/pdf";
 
 const elements = {
   addItem: document.querySelector("[data-add-item]"),
@@ -35,6 +36,7 @@ const elements = {
 const fieldRegistry = new Map();
 let debounceTimer;
 let lastUploadFile;
+let latestCalculationResult;
 
 function createId(prefix) {
   return `${prefix}-${crypto.randomUUID()}`;
@@ -428,6 +430,7 @@ function renderRawEnteredValues() {
 }
 
 function markPending() {
+  latestCalculationResult = undefined;
   clearIssues();
   elements.calculationStatus.textContent = "Pending";
   elements.calculationStatus.dataset.state = "pending";
@@ -508,6 +511,7 @@ function renderIssues(issues) {
 }
 
 function renderCalculation(result) {
+  latestCalculationResult = result;
   renderIssues(result.issues);
   elements.calculationStatus.textContent = result.finalized ? "Ready" : "Needs attention";
   elements.calculationStatus.dataset.state = result.finalized ? "ready" : "invalid";
@@ -555,11 +559,12 @@ function renderCalculation(result) {
   const canGeneratePdf = result.finalized && result.nonZero;
   elements.generatePdf.disabled = !canGeneratePdf;
   elements.pdfNote.textContent = canGeneratePdf
-    ? "The split is ready. PDF generation is implemented in milestone 4."
+    ? "The split is ready to download as a PDF."
     : "Complete a valid non-zero split to enable PDF export.";
 }
 
 function renderNetworkFailure() {
+  latestCalculationResult = undefined;
   clearIssues();
   elements.calculationStatus.textContent = "Unavailable";
   elements.calculationStatus.dataset.state = "failed";
@@ -574,6 +579,69 @@ function renderNetworkFailure() {
   elements.calculatedTotal.textContent = "Unavailable";
   elements.totalDifference.textContent = "Unavailable";
   renderRawEnteredValues();
+}
+
+function pdfFilename(response) {
+  const disposition = response.headers.get("Content-Disposition") || "";
+  const match = /filename="([^"]+)"/.exec(disposition);
+  return match ? match[1] : "checkmate-split.pdf";
+}
+
+function restorePdfButton() {
+  const currentResult = latestCalculationResult;
+  const ready =
+    currentResult &&
+    currentResult.revision === draft.revision &&
+    currentResult.finalized &&
+    currentResult.nonZero;
+  elements.generatePdf.disabled = !ready;
+}
+
+async function generatePdf() {
+  const requestedRevision = draft.revision;
+  elements.generatePdf.disabled = true;
+  elements.pdfNote.textContent = "Generating PDF…";
+  try {
+    const response = await fetch(PDF_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Checkmate-Request": "1",
+      },
+      body: JSON.stringify({...draft, revision: requestedRevision}),
+    });
+    if (response.status === 422) {
+      const result = await response.json();
+      if (result.revision === draft.revision) {
+        renderCalculation(result);
+        elements.pdfNote.textContent = "Correct the listed issues before downloading.";
+      }
+      return;
+    }
+    if (!response.ok) {
+      throw new Error("PDF request failed.");
+    }
+
+    const blob = await response.blob();
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = pdfFilename(response);
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
+    if (requestedRevision === draft.revision) {
+      elements.pdfNote.textContent = "PDF downloaded. Your editable draft is unchanged.";
+    }
+  } catch {
+    if (requestedRevision === draft.revision) {
+      elements.pdfNote.textContent =
+        "The PDF could not be generated. Your draft is unchanged; please try again.";
+    }
+  } finally {
+    restorePdfButton();
+  }
 }
 
 elements.addParticipant.addEventListener("click", addParticipant);
@@ -597,9 +665,7 @@ elements.retry.addEventListener("click", () => {
   markPending();
   void sendCalculation(draft.revision);
 });
-elements.generatePdf.addEventListener("click", () => {
-  elements.pdfNote.textContent = "PDF generation arrives in milestone 4.";
-});
+elements.generatePdf.addEventListener("click", () => void generatePdf());
 
 configureReceiptFields();
 renderParticipants();

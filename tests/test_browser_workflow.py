@@ -14,7 +14,8 @@ from io import BytesIO
 import pytest
 import uvicorn
 from PIL import Image
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page, Route, expect
+from pypdf import PdfReader
 
 from checkmate.adapters.receipt_parser import FakeReceiptParser
 from checkmate.web.app import create_app
@@ -132,6 +133,51 @@ def complete_manual_split(page: Page, live_server_url: str) -> None:
     expect(page.locator("[data-calculation-status]")).to_have_text("Ready")
 
 
+def test_complete_desktop_acceptance_journey(
+    page: Page, extraction_server_url: str
+) -> None:
+    """Exercise the complete generated-receipt workflow in one browser journey."""
+    open_application(page, extraction_server_url)
+    page.locator("[data-upload-file]").set_input_files(synthetic_receipt_upload())
+    page.get_by_role("button", name="Extract receipt").click()
+    expect(page.locator("[data-upload-status]")).to_contain_text("Extraction complete")
+
+    page.get_by_label("Item 1 name").fill("Pizza")
+    page.get_by_role("button", name="Add item").click()
+    page.get_by_label("Item 3 name").fill("Temporary generated item")
+    page.get_by_role("button", name="Remove item 3").click()
+
+    for participant_number, name in enumerate(
+        ("Maya", "Alex", "Temporary Person"), start=1
+    ):
+        page.get_by_role("button", name="Add participant").click()
+        page.get_by_label(f"Participant {participant_number} name").fill(name)
+    page.get_by_role("button", name="Remove participant 3").click()
+
+    page.get_by_label("Share item 1 with Maya").check()
+    page.get_by_label("Share item 1 with Alex").check()
+    page.get_by_label("Share item 2 with Alex").check()
+    expect(page.locator("[data-calculation-status]")).to_have_text("Ready")
+    expect(page.locator("[data-summary-body]")).to_contain_text("$6.16")
+    expect(page.locator("[data-summary-body]")).to_contain_text("$14.77")
+
+    page.get_by_label("Subtotal").fill("16.00")
+    expect(page.locator("[data-calculation-status]")).to_have_text("Needs attention")
+    expect(page.get_by_role("button", name="Generate PDF")).to_be_disabled()
+    page.get_by_label("Subtotal").fill("17.01")
+    expect(page.locator("[data-calculation-status]")).to_have_text("Ready")
+
+    with page.expect_download() as download_info:
+        page.get_by_role("button", name="Generate PDF").click()
+    download = download_info.value
+    text = "\n".join(
+        pdf_page.extract_text() or "" for pdf_page in PdfReader(download.path()).pages
+    )
+    assert download.suggested_filename == "checkmate-split.pdf"
+    for expected in ("Pizza", "Salad", "Maya", "Alex", "$20.93"):
+        assert expected in text
+
+
 def test_manual_entry_calculates_exact_totals_and_enables_export_state(
     page: Page, live_server_url: str
 ) -> None:
@@ -146,6 +192,82 @@ def test_manual_entry_calculates_exact_totals_and_enables_export_state(
     expect(page.locator("[data-calculated-total]")).to_have_text("$13.01")
     expect(page.locator("[data-error-summary]")).to_be_hidden()
     expect(page.get_by_role("button", name="Generate PDF")).to_be_enabled()
+
+
+def test_pdf_download_is_content_verified_and_preserves_the_draft(
+    page: Page, live_server_url: str
+) -> None:
+    complete_manual_split(page, live_server_url)
+
+    with page.expect_download() as download_info:
+        page.get_by_role("button", name="Generate PDF").click()
+    download = download_info.value
+    reader = PdfReader(download.path())
+    text = "\n".join(pdf_page.extract_text() or "" for pdf_page in reader.pages)
+
+    assert download.suggested_filename == "checkmate-split.pdf"
+    assert "Checkmate Expense Split" in text
+    assert "Synthetic noodles" in text
+    assert "Maya" in text
+    assert "Alex" in text
+    assert "$13.01" in text
+    expect(page.get_by_label("Item 1 name")).to_have_value("Synthetic noodles")
+    expect(page.locator("[data-pdf-note]")).to_contain_text("draft is unchanged")
+    expect(page.get_by_role("button", name="Generate PDF")).to_be_enabled()
+
+
+def test_pdf_server_rejection_and_failure_keep_the_editable_draft(
+    page: Page, live_server_url: str
+) -> None:
+    complete_manual_split(page, live_server_url)
+
+    def reject_pdf(route: Route) -> None:
+        assert route.request.post_data is not None
+        payload = json.loads(route.request.post_data)
+        route.fulfill(
+            status=422,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "revision": payload["revision"],
+                    "issues": [
+                        {
+                            "code": "subtotal_mismatch",
+                            "path": "receipt.subtotal",
+                            "message": "Entered subtotal must match the item total.",
+                            "severity": "error",
+                        }
+                    ],
+                    "participantTotals": [],
+                    "reconciliation": None,
+                    "finalized": False,
+                    "nonZero": True,
+                }
+            ),
+        )
+
+    page.route("**/api/splits/pdf", reject_pdf)
+    page.get_by_role("button", name="Generate PDF").click()
+    expect(page.locator("[data-error-summary]")).to_be_visible()
+    expect(page.get_by_label("Item 1 name")).to_have_value("Synthetic noodles")
+    page.unroute("**/api/splits/pdf")
+
+    page.get_by_label("Subtotal").fill("10.01")
+    expect(page.locator("[data-calculation-status]")).to_have_text("Ready")
+    page.route(
+        "**/api/splits/pdf",
+        lambda route: route.fulfill(
+            status=500,
+            content_type="application/json",
+            body='{"error":{"code":"pdf_generation_failed"}}',
+        ),
+    )
+    page.get_by_role("button", name="Generate PDF").click()
+
+    expect(page.locator("[data-pdf-note]")).to_contain_text("draft is unchanged")
+    expect(page.get_by_label("Item 1 name")).to_have_value("Synthetic noodles")
+    expect(page.get_by_role("button", name="Generate PDF")).to_be_enabled()
+    page.unroute("**/api/splits/pdf")
 
 
 def test_text_edits_are_debounced_and_checkboxes_calculate_immediately(
@@ -219,16 +341,30 @@ def test_mismatch_errors_are_linked_and_keyboard_assignment_works(
     expect(page.locator("[data-calculation-status]")).to_have_text("Needs attention")
     summary = page.locator("[data-error-summary]")
     expect(summary).to_be_visible()
+    expect(summary).to_have_attribute("role", "alert")
+    expect(summary).to_have_attribute("tabindex", "-1")
     summary.get_by_role("link", name="Entered subtotal must match").click()
     expect(subtotal).to_be_focused()
     expect(subtotal).to_have_attribute("aria-describedby", "field-issue-0")
+    assert subtotal.evaluate("element => element.labels.length") == 1
 
     subtotal.fill("10.01")
     expect(summary).to_be_hidden()
     expect(page.locator("[data-calculation-status]")).to_have_text("Pending")
     expect(page.locator("[data-calculation-status]")).to_have_text("Ready")
     maya_assignment = page.get_by_label("Share item 1 with Maya")
+    assert maya_assignment.evaluate(
+        "element => ({tagName: element.tagName, type: element.type})"
+    ) == {"tagName": "INPUT", "type": "checkbox"}
     maya_assignment.focus()
+    page.keyboard.press("Tab")
+    page.keyboard.press("Shift+Tab")
+    expect(maya_assignment).to_be_focused()
+    focus_style = maya_assignment.evaluate(
+        "element => ({style: getComputedStyle(element).outlineStyle, "
+        "width: getComputedStyle(element).outlineWidth})"
+    )
+    assert focus_style == {"style": "solid", "width": "3px"}
     page.keyboard.press("Space")
     expect(page.locator("[data-calculation-status]")).to_have_text("Ready")
     page.keyboard.press("Space")
@@ -247,8 +383,12 @@ def test_network_retry_stale_responses_and_narrow_table_behavior(
     expect(page.locator("[data-calculation-status]")).to_have_text("Needs attention")
 
     page.set_viewport_size({"width": 390, "height": 844})
-    for _ in range(8):
+    for participant_number in range(1, 9):
         page.get_by_role("button", name="Add participant").click()
+        page.get_by_label(f"Participant {participant_number} name").fill(
+            f"Person {participant_number}"
+        )
+    page.wait_for_timeout(350)
     scroll_metrics = page.locator("[data-table-scroll]").evaluate(
         "element => ({clientWidth: element.clientWidth, "
         "scrollWidth: element.scrollWidth})"
@@ -261,6 +401,15 @@ def test_network_retry_stale_responses_and_narrow_table_behavior(
     summary_box = page.locator(".summary-panel").bounding_box()
     assert receipt_box is not None and summary_box is not None
     assert summary_box["y"] > receipt_box["y"]
+    assignments = page.locator('input[type="checkbox"]')
+    expect(assignments).to_have_count(8)
+    for participant_number in range(1, 9):
+        assignment = page.get_by_label(f"Share item 1 with Person {participant_number}")
+        assignment.scroll_into_view_if_needed()
+        expect(assignment).to_be_visible()
+    last_assignment = page.get_by_label("Share item 1 with Person 8")
+    last_assignment.check()
+    expect(last_assignment).to_be_checked()
 
 
 def test_older_calculation_response_cannot_replace_a_newer_revision(

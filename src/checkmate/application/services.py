@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from collections import Counter
 
-from checkmate.application.models import CalculationOutput, RawSplitDraft
+from checkmate.application.models import (
+    CalculationOutput,
+    PdfExportOutput,
+    RawSplitDraft,
+)
+from checkmate.application.ports import PdfRenderer
 from checkmate.domain.models import (
     Assignments,
     Money,
@@ -39,6 +44,10 @@ ALLOCATION_BLOCKING_CODES = frozenset(
         "zero_subtotal_tip",
     }
 )
+
+
+class PdfRenderingError(RuntimeError):
+    """Signal a renderer failure without exposing adapter exception details."""
 
 
 def calculate_draft(draft: RawSplitDraft) -> CalculationOutput:
@@ -80,6 +89,24 @@ def calculate_draft(draft: RawSplitDraft) -> CalculationOutput:
         reconciliation=result.reconciliation,
         finalized_split=finalized,
     )
+
+
+class PdfExportService:
+    """Independently finalize a complete draft before rendering a PDF."""
+
+    def __init__(self, renderer: PdfRenderer) -> None:
+        self._renderer = renderer
+
+    def export(self, draft: RawSplitDraft) -> PdfExportOutput:
+        """Return issues for an invalid draft or PDF bytes for a finalized one."""
+        calculation = calculate_draft(draft)
+        if calculation.finalized_split is None or not calculation.non_zero:
+            return PdfExportOutput(calculation=calculation, content=None)
+        try:
+            content = self._renderer.render(calculation.finalized_split)
+        except Exception as error:
+            raise PdfRenderingError from error
+        return PdfExportOutput(calculation=calculation, content=content)
 
 
 def _convert_draft(
@@ -265,6 +292,8 @@ def _append_issue(issues: list[ValidationIssue], issue: ValidationIssue | None) 
 
 __all__ = [
     "CalculationOutput",
+    "PdfExportService",
+    "PdfRenderingError",
     "RawSplitDraft",
     "calculate_draft",
 ]

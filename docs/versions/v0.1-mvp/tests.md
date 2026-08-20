@@ -2,11 +2,12 @@
 
 ## Status
 
-Milestone 2 manual-splitting and Milestone 3 deterministic receipt-extraction
-evidence are passing as of 2026-08-19. The paid external-provider evaluation
-has not run because no `OPENAI_API_KEY` was available. PDF,
-production-container, external-provider, and final manual-review evidence
-remain open for their owning milestones.
+Milestone 2 manual-splitting, Milestone 3 deterministic receipt-extraction,
+Milestone 4 PDF-export, and Milestone 5 package-distribution and browser
+acceptance evidence are passing as of 2026-08-20. The paid external-provider
+evaluation is deferred by owner direction after authentication was rejected
+before any fixture completed. External-provider and final clean-checkout
+evidence remain open for their owning milestones.
 
 ## Evidence rules
 
@@ -53,10 +54,10 @@ finalization.
 | Application | `tests/test_calculation_service.py` | Raw-draft conversion and calculation orchestration without framework or network dependencies |
 | HTTP integration | `tests/test_calculation_http.py`, `tests/test_web.py` | Schemas, limits, status mapping, headers, safe logs, shell, and health |
 | Browser acceptance | `tests/test_browser_workflow.py` | Manual workflow, responsive behavior, keyboard use, debounce, retry, and stale responses |
-| Adapter unit | `tests/test_receipt_images.py`, `tests/test_openai_receipt_parser.py`; PDF planned in milestone 4 | Image normalization, provider translation, and PDF semantics |
+| Adapter unit | `tests/test_receipt_images.py`, `tests/test_openai_receipt_parser.py`, `tests/test_pdf_renderer.py` | Image normalization, provider translation, and PDF semantics |
 | Extraction application/HTTP | `tests/test_receipt_extraction_service.py`, `tests/test_receipt_extraction_http.py` | Bounded orchestration, cleanup, upload contracts, safe errors, and privacy |
-| External evaluation | `tests/external/test_receipt_extraction_evaluation.py` (opt-in; not yet run) | Pinned model and prompt quality on 12 generated receipt layouts |
-| Package/container smoke | `tests/smoke_test.py` and CI; container work remains milestone 5 | Installed assets, startup, health, routes, and shutdown |
+| External evaluation | `tests/external/test_receipt_extraction_evaluation.py` (opt-in; deferred without a successful provider response) | Pinned model and prompt quality on 12 generated receipt layouts |
+| Package/container smoke | Isolated wheel and source-distribution runs of `tests/smoke_test.py` pass; `tests/container_smoke_test.py` passes against the Linux/amd64 production image | Installed assets, startup, health, routes, and shutdown |
 
 ## Acceptance criteria
 
@@ -66,6 +67,9 @@ finalization.
   submits `POST /api/receipts/extract`.
 - [x] HTTP tests cover JPEG, PNG, and WebP plus invalid bytes, unsupported
   format, animation, encoded-size, and decoded-pixel rejection.
+- [x] Adapter tests recreate an iPhone-style JPEG-signature MPO and prove that
+  only its oriented primary frame becomes a metadata-free single-frame JPEG,
+  while other multi-frame inputs remain rejected.
 - [x] Evidence status: Milestone 3 deterministic evidence passing; live-provider
   and release closure remain open.
 
@@ -137,28 +141,35 @@ finalization.
 
 ### AC-08: Generate and download the finalized PDF
 
-- [ ] Application test proves only `FinalizedSplit` reaches `PdfRenderer` and
+- [x] Application tests prove only `FinalizedSplit` reaches `PdfRenderer` and
   invalid, stale, malformed, and zero drafts do not invoke it.
-- [ ] HTTP test verifies PDF media type, fixed attachment filename, no-store
+- [x] HTTP tests verify PDF media type, fixed attachment filename, no-store
   policy, safe errors, and independently recalculated content.
-- [ ] Browser test downloads the PDF and uses `pypdf` to confirm title,
-  restaurant/date, item assignments, receipt totals, and Alice/Bob totals.
-- [ ] Manual evidence confirms representative one-page and multi-page PDFs are
+- [x] Browser, HTTP, and renderer tests download or generate PDFs and use
+  `pypdf` to confirm the title, optional restaurant/date, item assignments,
+  receipt totals, and participant totals.
+- [x] Preliminary manual evidence confirms representative one-page and
+  nine-page PDFs are
   legible, aligned, complete, and professionally presented.
-- [ ] Evidence status: Planned in milestones 4 and 5.
+- [x] Evidence status: Milestone 4 evidence passing; final release-level visual
+  approval remains in milestone 5.
 
 ## Cross-cutting release evidence
 
-- [ ] Desktop interface manual review passes for clear hierarchy, restrained
+- [x] Desktop interface manual review passes for clear hierarchy, restrained
   styling, readable typography, and receipt-table focus.
-- [ ] Narrow-viewport manual review passes for stacked layout, touch targets,
+- [x] Narrow-viewport manual review passes for stacked layout, touch targets,
   horizontal scrolling, and access to every control.
 - [ ] External extraction evaluation records 12/12 schema-valid outputs, exact
   item count and monetary fields, no invented items, and at least 90% exact
   normalized optional text.
-- [ ] The isolated wheel and production image each serve `/`, linked static
+- [x] The isolated wheel and production image each serve `/`, linked static
   assets, and `/health` successfully.
-- [ ] The production image starts without runtime downloads, runs as non-root
+- [x] The production image starts without runtime downloads, runs as non-root
   with the approved filesystem constraints, and shuts down cleanly.
-- [ ] `uv lock --check`, Ruff lint and format, mypy, pytest with coverage, and
+- [x] `uv lock --check`, Ruff lint and format, mypy, pytest with coverage, and
   `uv build` all pass for the final release commit.
+
+Clean-checkout evidence on 2026-08-20: this release tree passed the complete
+`AGENTS.md` command set with 177 tests passing, one explicitly external test
+skipped, 98.91% coverage, and successful wheel and source-distribution builds.

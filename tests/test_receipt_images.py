@@ -76,6 +76,35 @@ def test_multiframe_supported_image_is_rejected() -> None:
     assert raised.value.code == "animated_receipt_not_supported"
 
 
+def test_iphone_mpo_jpeg_uses_only_metadata_free_primary_frame() -> None:
+    exif = Image.Exif()
+    exif[274] = 6
+    primary = Image.new("RGB", (40, 20), (220, 20, 20))
+    auxiliary = Image.new("RGB", (7, 5), (20, 20, 220))
+    output = BytesIO()
+    primary.save(
+        output,
+        format="MPO",
+        save_all=True,
+        append_images=[auxiliary],
+        exif=exif,
+        comment=b"synthetic auxiliary metadata",
+    )
+
+    result = PillowReceiptImageNormalizer().normalize(output.getvalue())
+
+    assert (result.width, result.height) == (20, 40)
+    assert b"synthetic auxiliary metadata" not in result.content
+    with Image.open(BytesIO(result.content)) as normalized:
+        normalized.load()
+        red, green, blue = normalized.getpixel((0, 0))
+        assert normalized.format == "JPEG"
+        assert getattr(normalized, "n_frames", 1) == 1
+        assert normalized.getexif() == {}
+        assert red > green
+        assert red > blue
+
+
 def test_pixel_limit_and_decompression_warnings_are_rejected(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

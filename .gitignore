@@ -17,6 +17,7 @@ venv/
 .coverage.*
 htmlcov/
 test-results/
+tmp/
 playwright-report/
 
 # Python build and packaging output

@@ -4,7 +4,8 @@
 
 In progress. Deterministic implementation and evidence completed on
 2026-08-19. The real-provider evaluation in M3-35 remains pending because no
-`OPENAI_API_KEY` was available for the required paid opt-in run.
+`OPENAI_API_KEY` was available for the required paid opt-in run. The iPhone
+MPO/JPEG compatibility work in M3-37 was completed on 2026-08-19.
 
 ## Outcome
 
@@ -52,16 +53,17 @@ actionable, bounded, and never destroy the current draft.
   duplicate, or structurally invalid upload input with a stable safe error.
 - [x] **M3-08:** Read at most 10 MiB plus one byte, return `413` when the bound is
   exceeded, and close the framework upload in `finally`.
-- [x] **M3-09:** Decode content with Pillow while allowing only JPEG, PNG, and
-  WebP; do not trust filename extensions or declared content type.
+- [x] **M3-09:** Decode content with Pillow while allowing JPEG, including the
+  approved primary-frame MPO compatibility case, PNG, and WebP; do not trust
+  filename extensions or declared content type.
 - [x] **M3-10:** Reject invalid content as `400`, unsupported formats as `415`,
-  animations and multi-frame images, images over 25 megapixels, and Pillow
-  decompression-bomb warnings.
-- [x] **M3-11:** Fully decode the image, apply EXIF orientation, convert it to
-  RGB, and downscale without upscaling so its longest edge is at most 4,000
-  pixels.
+  animations and multi-frame images other than the approved MPO compatibility
+  case, images over 25 megapixels, and Pillow decompression-bomb warnings.
+- [x] **M3-11:** Fully decode the selected primary image, apply EXIF
+  orientation, convert it to RGB, and downscale without upscaling so its
+  longest edge is at most 4,000 pixels.
 - [x] **M3-12:** Re-encode as JPEG quality 90 without source EXIF, XMP, comments,
-  filenames, or other metadata.
+  filenames, MPO data, or other metadata.
 - [x] **M3-13:** Keep original and normalized bytes only for the active request
   and never create an application-managed receipt file.
 
@@ -134,6 +136,14 @@ actionable, bounded, and never destroy the current draft.
   record metrics without committing provider response bodies.
 - [x] **M3-36:** Run all required `AGENTS.md` checks with normal CI remaining
   credential-free and network-free.
+
+## Compatibility follow-up
+
+- [x] **M3-37:** Revise and approve the receipt-extraction design, then safely
+  accept JPEG-signature MPO files produced by iPhones by normalizing only the
+  primary image and discarding auxiliary frames and metadata; continue
+  rejecting animated and other unsupported multi-frame inputs, and add a fully
+  synthetic regression fixture for the reported iPhone JPEG case.
 
 ## Completion criteria
 

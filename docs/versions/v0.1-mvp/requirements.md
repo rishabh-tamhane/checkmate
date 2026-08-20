@@ -55,7 +55,7 @@ After the receipt is read, the app should show the extracted items in a table.
 
 Example:
 
-| Item | Qty | Price | Rishabh | Alex | Maya | Sam |
+| Item | Qty | Price | Alice | Alex | Maya | Sam |
 |---|---:|---:|:---:|:---:|:---:|:---:|
 | Xiao Long Bao | 1 | $15.50 | ☑ | ☑ | ☑ | ☑ |
 | Chicken Fried Rice | 1 | $14.00 | ☑ | ☑ | ☐ | ☐ |
@@ -91,12 +91,12 @@ Tax and tip should be distributed proportionally based on each person's item sub
 
 Example:
 
-- Rishabh's items: $30
+- Alice's items: $30
 - Alex's items: $20
 - Item subtotal: $50
 - Tax: $5
 
-Rishabh is responsible for 60% of the item subtotal, so he receives 60% of the tax. Alex receives the remaining 40%.
+Alice is responsible for 60% of the item subtotal, so she receives 60% of the tax. Alex receives the remaining 40%.
 
 ### Rounding
 
@@ -120,7 +120,7 @@ Example:
 
 | Person | Amount Owed |
 |---|---:|
-| Rishabh | $25.31 |
+| Alice | $25.31 |
 | Alex | $26.84 |
 | Maya | $27.03 |
 | Sam | $25.03 |
@@ -156,8 +156,8 @@ August 16, 2026
 
 Item                    Price     Shared By
 -------------------------------------------------
-Xiao Long Bao           $15.50    Rishabh, Alex, Maya, Sam
-Chicken Fried Rice      $14.00    Rishabh, Alex
+Xiao Long Bao           $15.50    Alice, Alex, Maya, Sam
+Chicken Fried Rice      $14.00    Alice, Alex
 Vegetable Dumplings     $18.00    Maya, Sam
 
 Subtotal                           $47.50
@@ -167,7 +167,7 @@ Total                              $60.00
 
 Split Summary
 -------------------------------------------------
-Rishabh                            $XX.XX
+Alice                              $XX.XX
 Alex                               $XX.XX
 Maya                               $XX.XX
 Sam                                $XX.XX

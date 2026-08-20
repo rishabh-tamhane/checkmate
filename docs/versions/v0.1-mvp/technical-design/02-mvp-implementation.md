@@ -4,7 +4,7 @@
 
 Approved.
 
-Approval date: 2026-08-18.
+Approval date: 2026-08-19.
 
 This document has been reviewed against `../requirements.md` and resolves the
 implementation decisions needed to derive detailed tasks.
@@ -345,18 +345,23 @@ to review extracted values.
 Upload contract:
 
 - Accept one `multipart/form-data` field named `receipt`.
-- Accept JPEG, PNG, or WebP. HEIC/HEIF, PDF, SVG, GIF, and multi-frame images are
-  outside v0.1.
+- Accept JPEG, PNG, or WebP. A JPEG-signature MPO produced by an iPhone is an
+  approved JPEG compatibility case: select only its primary frame and discard
+  every auxiliary frame. HEIC/HEIF, PDF, SVG, GIF, animations, and all other
+  multi-frame images are outside v0.1.
 - Enforce 10 MiB encoded size by reading at most 10 MiB plus one byte.
 - Identify the image from decoded content with Pillow while restricting the
   attempted formats; do not trust the filename or declared content type.
-- Reject images over 25 megapixels and convert Pillow decompression-bomb
-  warnings into errors.
-- Decode the image fully, reject animation, apply EXIF orientation, convert to
-  RGB, and downscale without upscaling so the longest edge is at most 4,000
-  pixels.
+- Reject a selected primary image over 25 megapixels and convert Pillow
+  decompression-bomb warnings into errors.
+- For the approved MPO compatibility case, explicitly select and fully decode
+  frame zero without seeking, decoding, combining, or transmitting auxiliary
+  frames. For every other accepted container, require exactly one non-animated
+  frame.
+- Apply the selected frame's EXIF orientation, convert it to RGB, and downscale
+  without upscaling so the longest edge is at most 4,000 pixels.
 - Re-encode to JPEG at quality 90 without EXIF, XMP, comments, filenames, or
-  other source metadata.
+  other source metadata, including MPO metadata.
 - Hold the upload and normalized image only for the active request, close the
   spooled upload in `finally`, and never write application-managed receipt
   files to disk.
@@ -612,7 +617,8 @@ Unit tests cover:
 - ID, ordering, participant-name, quantity, item-count, and participant-count
   validation
 - Image format, encoded-size, pixel-count, animation, orientation, resizing,
-  and metadata-stripping behavior using generated synthetic images
+  metadata stripping, and iPhone-style MPO primary-frame selection using
+  generated synthetic images
 - PDF rendering through semantic text assertions and forced multi-page input
 
 Application-service tests inject fake parser and renderer implementations to

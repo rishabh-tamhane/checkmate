@@ -52,6 +52,23 @@ def test_application_shell_links_to_local_assets() -> None:
     assert "javascript" in script.headers["content-type"]
 
 
+def test_jinja_autoescaping_remains_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Template substitutions remain text even if metadata contains markup."""
+    unsafe_version = '<script data-synthetic="version">unsafe</script>'
+    monkeypatch.setattr("checkmate.web.app.__version__", unsafe_version)
+
+    with application_client() as client:
+        page = client.get("/")
+
+    assert unsafe_version not in page.text
+    assert (
+        "&lt;script data-synthetic=&#34;version&#34;&gt;unsafe&lt;/script&gt;"
+        in page.text
+    )
+
+
 def test_application_starts_without_an_openai_key() -> None:
     """Missing extraction configuration leaves manual entry healthy."""
     with application_client(Settings(openai_api_key=None)) as client:
@@ -70,9 +87,13 @@ def test_configured_key_enables_server_side_extraction_without_exposure() -> Non
         page = client.get("/")
 
     assert page.status_code == 200
-    assert "Choose one JPEG, PNG, or WebP image up to 10 MiB" in " ".join(
-        page.text.split()
-    )
+    normalized_page = " ".join(page.text.split())
+    assert "Choose one JPEG, PNG, or WebP image up to 10 MiB" in normalized_page
+    assert "receipt image is sent to OpenAI for extraction" in normalized_page
+    assert "Review every extracted field" in normalized_page
+    assert "You can enter everything manually without uploading" in normalized_page
+    assert "Upload restaurant receipts only" in normalized_page
+    assert "zero retention" not in normalized_page.casefold()
     assert "data-upload-file" in page.text
     assert "data-upload-file\n            disabled" not in page.text
     assert secret not in page.text

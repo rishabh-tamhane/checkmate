@@ -1,10 +1,9 @@
 """Vendor-neutral application boundaries for external capabilities."""
 
-from typing import Protocol, TypeVar
+from typing import Protocol
 
 from checkmate.application.models import ExtractionResult, NormalizedReceiptImage
-
-_PdfInputT = TypeVar("_PdfInputT", contravariant=True)
+from checkmate.domain.models import FinalizedSplit
 
 
 class ReceiptParser(Protocol):
@@ -23,12 +22,9 @@ class ReceiptImageNormalizer(Protocol):
         ...
 
 
-class PdfRenderer(Protocol[_PdfInputT]):
-    """Render one application-owned finalized split as PDF bytes.
+class PdfRenderer(Protocol):
+    """Render one application-owned finalized split as PDF bytes."""
 
-    Milestone 4 supplies the concrete finalized-split value.
-    """
-
-    def render(self, split: _PdfInputT) -> bytes:
+    def render(self, split: FinalizedSplit) -> bytes:
         """Return a PDF representation of a validated split."""
         ...

@@ -94,12 +94,17 @@ class PillowReceiptImageNormalizer:
             with warnings.catch_warnings():
                 warnings.simplefilter("error", Image.DecompressionBombWarning)
                 with Image.open(BytesIO(content), formats=_ACCEPTED_FORMATS) as source:
-                    if source.format not in _ACCEPTED_FORMATS:
+                    is_jpeg_mpo = source.format == "MPO" and content.startswith(
+                        b"\xff\xd8\xff"
+                    )
+                    if source.format not in _ACCEPTED_FORMATS and not is_jpeg_mpo:
                         raise ReceiptExtractionError(
                             code="unsupported_receipt_format",
                             message="Use a JPEG, PNG, or WebP receipt image.",
                             category="unsupported_format",
                         )
+                    if is_jpeg_mpo:
+                        source.seek(0)
                     width, height = source.size
                     if width * height > MAX_IMAGE_PIXELS:
                         raise ReceiptExtractionError(
@@ -109,8 +114,9 @@ class PillowReceiptImageNormalizer:
                             ),
                             category="too_many_pixels",
                         )
-                    if getattr(source, "n_frames", 1) != 1 or getattr(
-                        source, "is_animated", False
+                    if not is_jpeg_mpo and (
+                        getattr(source, "n_frames", 1) != 1
+                        or getattr(source, "is_animated", False)
                     ):
                         raise ReceiptExtractionError(
                             code="animated_receipt_not_supported",
