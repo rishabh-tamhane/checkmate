@@ -2,9 +2,11 @@
 
 ## Status
 
-Milestone 2 manual-splitting evidence is passing as of 2026-08-19. Extraction,
-PDF, production-container, external-provider, and final manual-review evidence
-remain planned for their owning milestones.
+Milestone 2 manual-splitting and Milestone 3 deterministic receipt-extraction
+evidence are passing as of 2026-08-19. The paid external-provider evaluation
+has not run because no `OPENAI_API_KEY` was available. PDF,
+production-container, external-provider, and final manual-review evidence
+remain open for their owning milestones.
 
 ## Evidence rules
 
@@ -51,30 +53,33 @@ finalization.
 | Application | `tests/test_calculation_service.py` | Raw-draft conversion and calculation orchestration without framework or network dependencies |
 | HTTP integration | `tests/test_calculation_http.py`, `tests/test_web.py` | Schemas, limits, status mapping, headers, safe logs, shell, and health |
 | Browser acceptance | `tests/test_browser_workflow.py` | Manual workflow, responsive behavior, keyboard use, debounce, retry, and stale responses |
-| Adapter unit | Planned in milestones 3 and 4 | Image normalization, provider translation, and PDF semantics |
-| External evaluation | Planned in milestone 3 | Pinned model and prompt quality on generated receipt images |
+| Adapter unit | `tests/test_receipt_images.py`, `tests/test_openai_receipt_parser.py`; PDF planned in milestone 4 | Image normalization, provider translation, and PDF semantics |
+| Extraction application/HTTP | `tests/test_receipt_extraction_service.py`, `tests/test_receipt_extraction_http.py` | Bounded orchestration, cleanup, upload contracts, safe errors, and privacy |
+| External evaluation | `tests/external/test_receipt_extraction_evaluation.py` (opt-in; not yet run) | Pinned model and prompt quality on 12 generated receipt layouts |
 | Package/container smoke | `tests/smoke_test.py` and CI; container work remains milestone 5 | Installed assets, startup, health, routes, and shutdown |
 
 ## Acceptance criteria
 
 ### AC-01: Upload a restaurant receipt
 
-- [ ] Fake-backed browser test selects a supported generated receipt image and
+- [x] Fake-backed browser test selects a supported generated receipt image and
   submits `POST /api/receipts/extract`.
-- [ ] HTTP tests cover JPEG, PNG, and WebP plus invalid bytes, unsupported
+- [x] HTTP tests cover JPEG, PNG, and WebP plus invalid bytes, unsupported
   format, animation, encoded-size, and decoded-pixel rejection.
-- [ ] Evidence status: Planned in milestones 3 and 5.
+- [x] Evidence status: Milestone 3 deterministic evidence passing; live-provider
+  and release closure remain open.
 
 ### AC-02: Convert the receipt into editable bill items
 
-- [ ] Browser test receives the fake structured extraction and renders every
+- [x] Browser test receives the fake structured extraction and renders every
   item, optional quantity, line total, subtotal, tax, tip, total, restaurant,
   and date field as applicable.
-- [ ] Browser test edits the deliberately incorrect extracted value and proves
+- [x] Browser test edits the deliberately incorrect extracted value and proves
   the corrected complete draft is sent for calculation.
-- [ ] Adapter contract tests prove provider objects are converted into
+- [x] Adapter contract tests prove provider objects are converted into
   application-owned editable strings without arithmetic repair.
-- [ ] Evidence status: Planned in milestones 3 and 5.
+- [x] Evidence status: Milestone 3 deterministic evidence passing; live-provider
+  and release closure remain open.
 
 ### AC-03: Add the people who shared the meal
 
@@ -111,13 +116,13 @@ finalization.
 
 ### AC-06: Correct receipt-reading mistakes
 
-- [ ] Browser test corrects the deliberate fake extraction error and observes
+- [x] Browser test corrects the deliberate fake extraction error and observes
   new server totals for the matching revision.
 - [x] Browser test proves failed calculation requests preserve
   the current editable draft and provide retry or manual entry.
 - [x] No-key browser test completes manual entry without calling OpenAI.
-- [ ] Evidence status: Manual correction and calculation recovery pass in
-  milestone 2; extraction correction remains milestones 3 and 5.
+- [x] Evidence status: Manual correction, calculation recovery, and fake-backed
+  extraction correction pass; live-provider and release closure remain open.
 
 ### AC-07: Confirm the calculated and entered totals match
 

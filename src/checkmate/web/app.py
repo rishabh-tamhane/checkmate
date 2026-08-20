@@ -16,15 +16,31 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
+from python_multipart.exceptions import MultipartParseError
+from starlette.datastructures import UploadFile
+from starlette.exceptions import HTTPException
 
 from checkmate import __version__
+from checkmate.adapters.receipt_parser import (
+    EXTRACTION_PROMPT_VERSION,
+    OPENAI_EXTRACTION_MODEL,
+    OpenAIReceiptParser,
+    PillowReceiptImageNormalizer,
+)
+from checkmate.application.extraction import (
+    MAX_UPLOAD_BYTES,
+    ReceiptExtractionError,
+    ReceiptExtractionService,
+)
 from checkmate.application.models import (
     CalculationOutput,
+    ExtractionResult,
     RawParticipant,
     RawReceipt,
     RawReceiptItem,
     RawSplitDraft,
 )
+from checkmate.application.ports import ReceiptImageNormalizer, ReceiptParser
 from checkmate.application.services import calculate_draft
 from checkmate.config import ConfigurationError, Settings
 from checkmate.domain.money import format_decimal, format_money, format_signed_cents
@@ -33,6 +49,9 @@ from checkmate.web.schemas import (
     CalculationResponse,
     ErrorDetail,
     ErrorResponse,
+    ExtractedReceiptItemResponse,
+    ExtractedReceiptResponse,
+    ExtractionResponse,
     HealthResponse,
     ItemAllocationResponse,
     NormalizedDraftResponse,
@@ -50,6 +69,7 @@ PACKAGE_DIRECTORY: Final = Path(__file__).parent
 TEMPLATE_DIRECTORY: Final = PACKAGE_DIRECTORY / "templates"
 STATIC_DIRECTORY: Final = PACKAGE_DIRECTORY / "static"
 HTTP_LOGGER: Final = logging.getLogger("checkmate.http")
+EXTRACTION_LOGGER: Final = logging.getLogger("checkmate.extraction")
 INTERNAL_ERROR_MESSAGE: Final = "Checkmate could not complete this request."
 JSON_BODY_LIMIT: Final = 256 * 1024
 SAME_ORIGIN_HEADER: Final = "X-Checkmate-Request"
@@ -67,7 +87,12 @@ SECURITY_HEADERS: Final[Mapping[str, str]] = {
 RequestHandler = Callable[[Request], Awaitable[Response]]
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    *,
+    receipt_parser: ReceiptParser | None = None,
+    image_normalizer: ReceiptImageNormalizer | None = None,
+) -> FastAPI:
     """Construct an isolated FastAPI application from validated settings."""
     if settings is None:
         settings = Settings.from_environment()
@@ -80,6 +105,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         openapi_url=None,
     )
     templates = Jinja2Templates(directory=TEMPLATE_DIRECTORY)
+    if receipt_parser is None and settings.openai_api_key is not None:
+        receipt_parser = OpenAIReceiptParser(settings.openai_api_key)
+    extraction_service = (
+        ReceiptExtractionService(
+            parser=receipt_parser,
+            normalizer=image_normalizer or PillowReceiptImageNormalizer(),
+        )
+        if receipt_parser is not None
+        else None
+    )
 
     @app.middleware("http")
     async def request_context(request: Request, call_next: RequestHandler) -> Response:
@@ -138,10 +173,86 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             name="index.html",
             context={
                 "application_version": __version__,
-                "automatic_extraction_available": False,
-                "api_key_configured": settings.openai_api_key is not None,
+                "automatic_extraction_available": extraction_service is not None,
             },
         )
+
+    @app.post(
+        "/api/receipts/extract",
+        response_model=ExtractionResponse,
+        response_model_by_alias=True,
+        summary="Extract editable fields from one restaurant receipt image",
+    )
+    async def extract_receipt(request: Request) -> Response:
+        origin_error = _same_origin_error(request)
+        if origin_error is not None:
+            return origin_error
+        if extraction_service is None:
+            _log_extraction_error(request, "extraction_not_configured")
+            return _safe_error_response(
+                request,
+                status_code=503,
+                code="automatic_extraction_unavailable",
+                message=(
+                    "Automatic extraction is unavailable. Enter the receipt manually."
+                ),
+            )
+        if (
+            not request.headers.get("content-type", "")
+            .lower()
+            .startswith("multipart/form-data")
+        ):
+            return _invalid_upload_response(request)
+
+        form = None
+        started_at = perf_counter()
+        try:
+            try:
+                form = await request.form(
+                    max_files=2,
+                    max_fields=1,
+                    max_part_size=MAX_UPLOAD_BYTES + 1,
+                )
+            except HTTPException, MultipartParseError:
+                return _invalid_upload_response(request)
+            parts = form.multi_items()
+            if (
+                len(parts) != 1
+                or parts[0][0] != "receipt"
+                or not isinstance(parts[0][1], UploadFile)
+            ):
+                return _invalid_upload_response(request)
+
+            output = await extraction_service.extract(parts[0][1])
+            response = _to_extraction_response(output.result)
+            duration_ms = round((perf_counter() - started_at) * 1000)
+            EXTRACTION_LOGGER.info(
+                "extraction_complete request_id=%s upload_bytes=%s "
+                "normalized_width=%s normalized_height=%s model=%s "
+                "prompt_version=%s duration_ms=%s",
+                request.state.request_id,
+                output.upload_byte_count,
+                output.normalized_width,
+                output.normalized_height,
+                OPENAI_EXTRACTION_MODEL,
+                EXTRACTION_PROMPT_VERSION,
+                duration_ms,
+            )
+            return JSONResponse(
+                status_code=200,
+                content=response.model_dump(mode="json", by_alias=True),
+            )
+        except ReceiptExtractionError as error:
+            _log_extraction_error(request, error.category)
+            return _safe_error_response(
+                request,
+                status_code=_extraction_status(error.category),
+                code=error.code,
+                message=error.safe_message,
+            )
+        finally:
+            if form is not None:
+                await form.close()
 
     @app.post(
         "/api/splits/calculate",
@@ -263,6 +374,61 @@ def _safe_error_response(
         )
     )
     return JSONResponse(status_code=status_code, content=error.model_dump())
+
+
+def _invalid_upload_response(request: Request) -> JSONResponse:
+    """Return the stable error for a missing, duplicate, or malformed upload."""
+    _log_extraction_error(request, "invalid_upload")
+    return _safe_error_response(
+        request,
+        status_code=400,
+        code="invalid_receipt_upload",
+        message="Upload exactly one file in the receipt field.",
+    )
+
+
+def _extraction_status(category: str) -> int:
+    if category == "upload_too_large":
+        return 413
+    if category == "unsupported_format":
+        return 415
+    if category == "provider_timeout":
+        return 504
+    if category.startswith("provider_") or category == "invalid_provider_response":
+        return 502
+    return 400
+
+
+def _log_extraction_error(request: Request, category: str) -> None:
+    EXTRACTION_LOGGER.warning(
+        "extraction_failed request_id=%s error_category=%s",
+        request.state.request_id,
+        category,
+    )
+
+
+def _to_extraction_response(result: ExtractionResult) -> ExtractionResponse:
+    """Translate application suggestions into a fresh editable browser draft."""
+    return ExtractionResponse(
+        receipt=ExtractedReceiptResponse(
+            restaurantName=result.restaurant_name or "",
+            date=result.receipt_date or "",
+            items=[
+                ExtractedReceiptItemResponse(
+                    id=f"item-{uuid4()}",
+                    name=item.name,
+                    quantity=item.quantity or "",
+                    lineTotal=item.line_total,
+                )
+                for item in result.items
+            ],
+            subtotal=result.subtotal or "",
+            tax=result.tax or "",
+            tip=result.tip or "0.00",
+            total=result.total or "",
+        ),
+        notices=list(result.notices),
+    )
 
 
 def _to_raw_draft(request: CalculationRequest) -> RawSplitDraft:

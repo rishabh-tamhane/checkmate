@@ -34,22 +34,61 @@
         <div>
           <h2 id="upload-title">Receipt image</h2>
           <p class="supporting-text">
-            Automatic extraction arrives in milestone 3. Manual entry below is
-            fully available without an OpenAI key.
+            {% if automatic_extraction_available %}
+              Choose one JPEG, PNG, or WebP image up to 10 MiB. Manual entry
+              remains available below.
+            {% else %}
+              Automatic extraction is unavailable because this server has no
+              OpenAI key. Manual entry remains fully available below.
+            {% endif %}
           </p>
           <p class="privacy-note">
-            When enabled, receipt images will be sent to OpenAI for extraction.
-            Review every extracted field and upload restaurant receipts only—not
-            health, identity, or regulated financial documents.
+            If you upload, the receipt image is sent to OpenAI for extraction.
+            Review every extracted field. Upload restaurant receipts only—not
+            health, identity, or regulated financial documents. You can enter
+            everything manually without uploading.
           </p>
         </div>
-        <button type="button" disabled aria-describedby="upload-unavailable">
-          Upload receipt
-        </button>
-        <span id="upload-unavailable" class="visually-hidden">
-          Automatic receipt extraction is not available yet.
-        </span>
+        <form class="upload-form" data-upload-form>
+          <label for="receipt-upload">Receipt image</label>
+          <input
+            id="receipt-upload"
+            type="file"
+            name="receipt"
+            accept="image/jpeg,image/png,image/webp"
+            data-upload-file
+            {% if not automatic_extraction_available %}disabled{% endif %}
+          >
+          <button
+            type="submit"
+            class="primary-button"
+            data-upload-button
+            {% if not automatic_extraction_available %}disabled{% endif %}
+          >
+            Extract receipt
+          </button>
+          <button
+            type="button"
+            class="secondary-button"
+            data-upload-retry
+            hidden
+          >
+            Retry extraction
+          </button>
+          <p class="upload-status" data-upload-status aria-live="polite">
+            {% if automatic_extraction_available %}
+              No image selected.
+            {% else %}
+              Continue with manual entry.
+            {% endif %}
+          </p>
+        </form>
       </section>
+
+      <div class="extraction-notices" data-extraction-notices hidden>
+        <h2>Review the extraction</h2>
+        <ul data-extraction-notice-list></ul>
+      </div>
 
       <div
         class="error-summary"

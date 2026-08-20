@@ -9,12 +9,11 @@ The planned workflow is:
 Upload receipt -> Review and edit -> Assign people -> Calculate split -> Generate PDF
 ```
 
-The application now provides the complete manual splitting workflow: editable
-receipt fields, ordered participants, checkbox assignments, cent-exact tax and
-tip allocation, reconciliation, and actionable validation. Automatic receipt
-extraction and PDF generation are subsequent milestones. Product requirements
-and design documents are under `docs/versions/`; `docs/versions/CURRENT`
-identifies the active version.
+The application provides editable receipt fields, optional receipt-image
+extraction, ordered participants, checkbox assignments, cent-exact tax and tip
+allocation, reconciliation, and actionable validation. PDF generation is the
+next product milestone. Product requirements and design documents are under
+`docs/versions/`; `docs/versions/CURRENT` identifies the active version.
 
 ## Prerequisites
 
@@ -78,18 +77,31 @@ The process reads these environment variables at startup:
 | `HOST` | `0.0.0.0` | Listen on every available network interface |
 | `PORT` | `8000` | Listening TCP port |
 | `LOG_LEVEL` | `info` | `critical`, `error`, `warning`, `info`, `debug`, or `trace` |
-| `OPENAI_API_KEY` | absent | Reserved for milestone 3 receipt extraction |
+| `OPENAI_API_KEY` | absent | Enables automatic receipt extraction through OpenAI |
 
 An invalid host, port, or log level stops startup with a safe configuration
 message. `OPENAI_API_KEY` is optional and must be supplied only through the
 process environment or a deployment secret store; it is never rendered or
 logged.
 
-Manual entry and deterministic splitting work without an OpenAI key. Drafts
-exist only in the current browser page and disappear on refresh; the server
-stores no receipt or participant data. Automatic extraction arrives in
-milestone 3. A missing OpenAI key never stops manual calculation, the web
-process, or the health endpoint.
+Manual entry and deterministic splitting work without an OpenAI key. To enable
+the receipt upload for the current terminal, set `OPENAI_API_KEY` in the process
+environment before starting Checkmate:
+
+```bash
+export OPENAI_API_KEY="your-key"
+uv run checkmate-web
+```
+
+Never place a real key in source code, Git, browser fields, or a committed
+`.env` file. With a key configured, the page accepts one JPEG, PNG, or WebP
+receipt image up to 10 MiB. It tells the user before upload that the image is
+sent to OpenAI and that every extracted value requires review.
+
+Drafts exist only in the current browser page and disappear on refresh. The
+server creates no application-managed receipt files and does not store receipt
+or participant data. A missing key or provider failure never stops manual
+calculation, the web process, or the health endpoint.
 
 ## Verification
 
@@ -136,6 +148,15 @@ uv run pytest \
 `--headed` displays the browser, and `--slowmo` adds a delay in milliseconds
 between browser actions. The test window closes automatically when the test
 finishes.
+
+The paid provider-quality evaluation is excluded from normal tests. It uses 12
+generated fictional receipt layouts and runs only with both an environment key
+and the explicit switch:
+
+```bash
+uv run pytest --run-external --no-cov \
+  tests/external/test_receipt_extraction_evaluation.py -s
+```
 
 ## Test the application manually
 

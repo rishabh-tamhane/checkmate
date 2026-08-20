@@ -2,8 +2,9 @@
 
 ## Status
 
-In progress. Milestones 1 and 2 are complete. Milestones 3 and 4 are ready and
-may proceed independently. The
+In progress. Milestones 1 and 2 are complete. Milestone 3 has deterministic
+implementation and evidence but awaits its real-provider evaluation. Milestone
+4 is ready. The
 [MVP implementation technical design](../technical-design/02-mvp-implementation.md)
 and all detailed guides were approved on 2026-08-18.
 
@@ -28,7 +29,7 @@ and all detailed guides were approved on 2026-08-18.
 |---:|---|---|---|
 | 1 | [Application foundation](02-mvp-implementation/01-application-foundation.md) | Complete | The installed package starts one stateless web process and serves its shell and health endpoint. |
 | 2 | [Manual splitting workflow](02-mvp-implementation/02-manual-splitting-workflow.md) | Complete | A user can manually enter, validate, assign, and calculate an exact split. |
-| 3 | [Receipt extraction](02-mvp-implementation/03-receipt-extraction.md) | Ready | A user can upload a safe image and receive editable extracted receipt data. |
+| 3 | [Receipt extraction](02-mvp-implementation/03-receipt-extraction.md) | In progress: external evaluation pending | A user can upload a safe image and receive editable extracted receipt data. |
 | 4 | [PDF export](02-mvp-implementation/04-pdf-export.md) | Ready | A valid split can be downloaded as a complete, readable PDF. |
 | 5 | [Production readiness](02-mvp-implementation/05-production-readiness.md) | Blocked by milestones 3 and 4 | The complete MVP passes release checks and runs from its production image. |
 

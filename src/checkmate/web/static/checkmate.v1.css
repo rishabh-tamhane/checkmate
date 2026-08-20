@@ -152,7 +152,8 @@ h3 {
 .participants-panel,
 .receipt-panel,
 .summary-panel,
-.error-summary {
+.error-summary,
+.extraction-notices {
   border: 1px solid var(--border);
   border-radius: 0.625rem;
   background: var(--surface);
@@ -173,6 +174,29 @@ h3 {
   line-height: 1.5;
 }
 
+.upload-form {
+  display: grid;
+  flex: 0 1 24rem;
+  gap: 0.625rem;
+  min-width: min(100%, 18rem);
+}
+
+.upload-form label {
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.upload-form input[type="file"] {
+  height: auto;
+  min-height: 2.75rem;
+  padding: 0.5rem;
+}
+
+.upload-status {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
 .privacy-note {
   color: #48535e;
   font-size: 0.8125rem;
@@ -183,6 +207,22 @@ h3 {
   padding: 1.25rem;
   border-color: #d9a5a2;
   background: #fff8f7;
+}
+
+.extraction-notices {
+  margin-bottom: 1rem;
+  padding: 1.25rem;
+  border-color: #a9c7d0;
+  background: #f5fbfc;
+}
+
+.extraction-notices h2 {
+  font-size: 1.125rem;
+}
+
+.extraction-notices ul {
+  margin-bottom: 0;
+  padding-left: 1.25rem;
 }
 
 .error-summary h2 {

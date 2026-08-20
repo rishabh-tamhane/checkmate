@@ -9,11 +9,14 @@ import time
 import urllib.error
 import urllib.request
 from collections.abc import Iterator
+from io import BytesIO
 
 import pytest
 import uvicorn
+from PIL import Image
 from playwright.sync_api import Page, expect
 
+from checkmate.adapters.receipt_parser import FakeReceiptParser
 from checkmate.web.app import create_app
 
 
@@ -54,6 +57,53 @@ def live_server_url() -> Iterator[str]:
     server.should_exit = True
     thread.join(timeout=5)
     assert not thread.is_alive()
+
+
+@pytest.fixture(scope="module")
+def extraction_server_url() -> Iterator[str]:
+    """Run the application with its deterministic receipt parser enabled."""
+    port = available_port()
+    url = f"http://127.0.0.1:{port}"
+    server = uvicorn.Server(
+        uvicorn.Config(
+            create_app(receipt_parser=FakeReceiptParser()),
+            host="127.0.0.1",
+            port=port,
+            log_level="critical",
+            access_log=False,
+        )
+    )
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    deadline = time.monotonic() + 10
+    while True:
+        try:
+            with urllib.request.urlopen(f"{url}/health", timeout=1) as response:
+                if response.status == 200:
+                    break
+        except urllib.error.URLError, TimeoutError:
+            if time.monotonic() >= deadline:
+                raise AssertionError(
+                    "Extraction browser server did not start."
+                ) from None
+            time.sleep(0.05)
+
+    yield url
+    server.should_exit = True
+    thread.join(timeout=5)
+    assert not thread.is_alive()
+
+
+def synthetic_receipt_upload() -> dict[str, str | bytes]:
+    """Return a generated PNG in Playwright's in-memory upload shape."""
+    image = Image.new("RGB", (120, 240), "white")
+    output = BytesIO()
+    image.save(output, format="PNG")
+    return {
+        "name": "synthetic-receipt.png",
+        "mimeType": "image/png",
+        "buffer": output.getvalue(),
+    }
 
 
 def open_application(page: Page, live_server_url: str) -> None:
@@ -257,3 +307,98 @@ def test_browser_source_uses_no_persistence_or_unsafe_html() -> None:
         "serviceWorker",
     ):
         assert forbidden not in source
+
+
+def test_successful_extraction_replaces_receipt_and_preserves_participants(
+    page: Page, extraction_server_url: str
+) -> None:
+    open_application(page, extraction_server_url)
+    calculation_payloads: list[dict[str, object]] = []
+
+    def capture_calculation(request: object) -> None:
+        url = getattr(request, "url", "")
+        post_data = getattr(request, "post_data", None)
+        if str(url).endswith("/api/splits/calculate") and isinstance(post_data, str):
+            calculation_payloads.append(json.loads(post_data))
+
+    page.on("request", capture_calculation)
+    page.get_by_role("button", name="Add participant").click()
+    page.get_by_label("Participant 1 name").fill("Maya")
+    page.get_by_role("button", name="Add participant").click()
+    page.get_by_label("Participant 2 name").fill("Alex")
+    page.get_by_label("Item 1 name").fill("Old manual item")
+    page.get_by_label("Item 1 line total").fill("1.00")
+    page.get_by_label("Share item 1 with Maya").check()
+
+    page.locator("[data-upload-file]").set_input_files(synthetic_receipt_upload())
+    page.get_by_role("button", name="Extract receipt").click()
+
+    expect(page.locator("[data-upload-status]")).to_contain_text("Extraction complete")
+    expect(page.get_by_label("Participant 1 name")).to_have_value("Maya")
+    expect(page.get_by_label("Participant 2 name")).to_have_value("Alex")
+    expect(page.get_by_label("Item 1 name")).to_have_value("Piza")
+    expect(page.get_by_label("Item 2 name")).to_have_value("Salad")
+    expect(page.get_by_label("Share item 1 with Maya")).not_to_be_checked()
+    expect(page.get_by_label("Share item 2 with Alex")).not_to_be_checked()
+    expect(page.locator("[data-extraction-notices]")).to_be_visible()
+
+    page.get_by_label("Item 1 name").fill("Pizza")
+    page.wait_for_timeout(350)
+    assert calculation_payloads[-1]["receipt"]["items"][0]["name"] == "Pizza"
+    page.get_by_label("Share item 1 with Maya").check()
+    page.get_by_label("Share item 1 with Alex").check()
+    page.get_by_label("Share item 2 with Alex").check()
+    expect(page.locator("[data-calculation-status]")).to_have_text("Ready")
+
+
+def test_extraction_failure_preserves_draft_and_retry_succeeds(
+    page: Page, extraction_server_url: str
+) -> None:
+    open_application(page, extraction_server_url)
+    page.get_by_label("Restaurant name").fill("Current Manual Draft")
+    page.get_by_label("Item 1 name").fill("Keep this item")
+    page.get_by_label("Item 1 line total").fill("4.20")
+
+    page.route(
+        "**/api/receipts/extract",
+        lambda route: route.fulfill(
+            status=502,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "error": {
+                        "code": "receipt_extraction_unavailable",
+                        "message": "Retry or enter the receipt manually.",
+                        "request_id": "synthetic-request-id",
+                    }
+                }
+            ),
+        ),
+    )
+    page.locator("[data-upload-file]").set_input_files(synthetic_receipt_upload())
+    page.get_by_role("button", name="Extract receipt").click()
+
+    expect(page.locator("[data-upload-status]")).to_contain_text(
+        "current draft is unchanged"
+    )
+    expect(page.get_by_label("Restaurant name")).to_have_value("Current Manual Draft")
+    expect(page.get_by_label("Item 1 name")).to_have_value("Keep this item")
+    expect(page.get_by_role("button", name="Retry extraction")).to_be_visible()
+
+    page.unroute("**/api/receipts/extract")
+    page.get_by_role("button", name="Retry extraction").click()
+    expect(page.locator("[data-upload-status]")).to_contain_text("Extraction complete")
+    expect(page.get_by_label("Item 1 name")).to_have_value("Piza")
+
+
+def test_no_key_browser_mode_keeps_manual_controls_available(
+    page: Page, live_server_url: str
+) -> None:
+    open_application(page, live_server_url)
+
+    expect(page.locator("[data-upload-file]")).to_be_disabled()
+    expect(page.get_by_role("button", name="Extract receipt")).to_be_disabled()
+    expect(page.locator("[data-upload-status]")).to_have_text(
+        "Continue with manual entry."
+    )
+    expect(page.get_by_label("Item 1 name")).to_be_editable()

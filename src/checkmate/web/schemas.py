@@ -36,6 +36,40 @@ class ErrorResponse(BaseModel):
     error: ErrorDetail
 
 
+class ExtractedReceiptItemResponse(BaseModel):
+    """One editable item suggested by receipt extraction."""
+
+    model_config = STRICT_SCHEMA
+
+    id: str
+    name: str
+    quantity: str
+    line_total: str = Field(alias="lineTotal")
+
+
+class ExtractedReceiptResponse(BaseModel):
+    """Editable receipt fields returned by extraction."""
+
+    model_config = STRICT_SCHEMA
+
+    restaurant_name: str = Field(alias="restaurantName")
+    date: str
+    items: list[ExtractedReceiptItemResponse]
+    subtotal: str
+    tax: str
+    tip: str
+    total: str
+
+
+class ExtractionResponse(BaseModel):
+    """Stable successful receipt-extraction response."""
+
+    model_config = STRICT_SCHEMA
+
+    receipt: ExtractedReceiptResponse
+    notices: list[str]
+
+
 class ReceiptItemRequest(BaseModel):
     """One raw editable receipt row."""
 

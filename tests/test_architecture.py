@@ -8,7 +8,23 @@ from checkmate.application.ports import PdfRenderer, ReceiptParser
 
 PACKAGE_ROOT = Path(__file__).parents[1] / "src" / "checkmate"
 DOMAIN_ROOT = PACKAGE_ROOT / "domain"
-FORBIDDEN_DOMAIN_IMPORTS = {"fastapi", "pydantic", "openai", "reportlab"}
+APPLICATION_ROOT = PACKAGE_ROOT / "application"
+FORBIDDEN_DOMAIN_IMPORTS = {
+    "PIL",
+    "fastapi",
+    "openai",
+    "pydantic",
+    "python_multipart",
+    "reportlab",
+}
+FORBIDDEN_APPLICATION_IMPORTS = {
+    "PIL",
+    "fastapi",
+    "openai",
+    "pydantic",
+    "python_multipart",
+    "reportlab",
+}
 SKELETON_MODULES = (
     "checkmate.domain.models",
     "checkmate.domain.money",
@@ -41,6 +57,22 @@ def test_approved_module_skeleton_is_importable() -> None:
     """Each planned layer exists without importing a vendor SDK."""
     for module_name in SKELETON_MODULES:
         importlib.import_module(module_name)
+
+
+def test_application_layer_contains_no_framework_or_vendor_imports() -> None:
+    """Application contracts expose no Pillow, OpenAI, or web-owned types."""
+    imported_roots: set[str] = set()
+    for source_path in APPLICATION_ROOT.glob("*.py"):
+        tree = ast.parse(source_path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                imported_roots.update(
+                    alias.name.partition(".")[0] for alias in node.names
+                )
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                imported_roots.add(node.module.partition(".")[0])
+
+    assert imported_roots.isdisjoint(FORBIDDEN_APPLICATION_IMPORTS)
 
 
 def test_external_boundaries_are_application_owned_protocols() -> None:

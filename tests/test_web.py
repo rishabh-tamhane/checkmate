@@ -59,18 +59,22 @@ def test_application_starts_without_an_openai_key() -> None:
         health = client.get("/health")
 
     assert page.status_code == 200
-    assert "Manual entry below is fully available" in " ".join(page.text.split())
+    assert "Manual entry remains fully available below" in " ".join(page.text.split())
     assert health.json()["status"] == "ok"
 
 
-def test_foundation_does_not_enable_extraction_when_a_key_exists() -> None:
-    """A configured secret does not enable a milestone 3 capability early."""
+def test_configured_key_enables_server_side_extraction_without_exposure() -> None:
+    """A configured secret enables upload without entering the HTML response."""
     secret = "test-secret-value"
     with application_client(Settings(openai_api_key=secret)) as client:
         page = client.get("/")
 
     assert page.status_code == 200
-    assert "Automatic extraction arrives in milestone 3" in page.text
+    assert "Choose one JPEG, PNG, or WebP image up to 10 MiB" in " ".join(
+        page.text.split()
+    )
+    assert "data-upload-file" in page.text
+    assert "data-upload-file\n            disabled" not in page.text
     assert secret not in page.text
 
 

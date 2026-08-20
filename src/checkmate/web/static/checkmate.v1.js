@@ -1,5 +1,6 @@
 const DEBOUNCE_MILLISECONDS = 300;
 const CALCULATION_ENDPOINT = "/api/splits/calculate";
+const EXTRACTION_ENDPOINT = "/api/receipts/extract";
 
 const elements = {
   addItem: document.querySelector("[data-add-item]"),
@@ -11,6 +12,8 @@ const elements = {
   enteredTotal: document.querySelector("[data-entered-total]"),
   errorList: document.querySelector("[data-error-list]"),
   errorSummary: document.querySelector("[data-error-summary]"),
+  extractionNoticeList: document.querySelector("[data-extraction-notice-list]"),
+  extractionNotices: document.querySelector("[data-extraction-notices]"),
   generatePdf: document.querySelector("[data-generate-pdf]"),
   participantList: document.querySelector("[data-participant-list]"),
   participantsEmpty: document.querySelector("[data-participants-empty]"),
@@ -22,10 +25,16 @@ const elements = {
   summaryBody: document.querySelector("[data-summary-body]"),
   summaryEmpty: document.querySelector("[data-summary-empty]"),
   totalDifference: document.querySelector("[data-total-difference]"),
+  uploadButton: document.querySelector("[data-upload-button]"),
+  uploadFile: document.querySelector("[data-upload-file]"),
+  uploadForm: document.querySelector("[data-upload-form]"),
+  uploadRetry: document.querySelector("[data-upload-retry]"),
+  uploadStatus: document.querySelector("[data-upload-status]"),
 };
 
 const fieldRegistry = new Map();
 let debounceTimer;
+let lastUploadFile;
 
 function createId(prefix) {
   return `${prefix}-${crypto.randomUUID()}`;
@@ -102,6 +111,76 @@ function configureReceiptFields() {
     registerField(`receipt.${path}`, element);
     element.addEventListener("input", () => setReceiptField(field, element.value));
   });
+}
+
+function syncReceiptFields() {
+  document.querySelectorAll("[data-receipt-field]").forEach((element) => {
+    if (!(element instanceof HTMLInputElement)) {
+      return;
+    }
+    const field = element.dataset.receiptField;
+    if (field && field in draft.receipt && field !== "items") {
+      element.value = draft.receipt[field];
+    }
+  });
+}
+
+function renderExtractionNotices(notices) {
+  elements.extractionNoticeList.replaceChildren();
+  notices.forEach((notice) => {
+    const item = document.createElement("li");
+    item.textContent = notice;
+    elements.extractionNoticeList.append(item);
+  });
+  elements.extractionNotices.hidden = notices.length === 0;
+}
+
+function applyExtraction(result) {
+  draft.receipt = result.receipt;
+  draft.assignments = Object.fromEntries(
+    result.receipt.items.map((item) => [item.id, []]),
+  );
+  syncReceiptFields();
+  renderReceiptTable();
+  renderExtractionNotices(result.notices);
+  renderRawEnteredValues();
+  beginDraftChange(true);
+}
+
+async function uploadReceipt(file) {
+  lastUploadFile = file;
+  elements.uploadButton.disabled = true;
+  elements.uploadRetry.hidden = true;
+  elements.uploadStatus.textContent = "Extracting receipt…";
+  const form = new FormData();
+  form.append("receipt", file);
+  try {
+    const response = await fetch(EXTRACTION_ENDPOINT, {
+      method: "POST",
+      headers: {"X-Checkmate-Request": "1"},
+      body: form,
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(
+        result.error?.message || "Receipt extraction failed. Enter it manually.",
+      );
+    }
+    applyExtraction(result);
+    lastUploadFile = undefined;
+    elements.uploadFile.value = "";
+    elements.uploadStatus.textContent =
+      "Extraction complete. Review and correct every field.";
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Receipt extraction failed. Enter it manually.";
+    elements.uploadStatus.textContent = `${message} Your current draft is unchanged.`;
+    elements.uploadRetry.hidden = false;
+  } finally {
+    elements.uploadButton.disabled = elements.uploadFile.disabled;
+  }
 }
 
 function renderParticipants() {
@@ -499,6 +578,20 @@ function renderNetworkFailure() {
 
 elements.addParticipant.addEventListener("click", addParticipant);
 elements.addItem.addEventListener("click", addItem);
+elements.uploadForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const file = elements.uploadFile.files?.item(0);
+  if (!file) {
+    elements.uploadStatus.textContent = "Choose a receipt image first.";
+    return;
+  }
+  void uploadReceipt(file);
+});
+elements.uploadRetry.addEventListener("click", () => {
+  if (lastUploadFile) {
+    void uploadReceipt(lastUploadFile);
+  }
+});
 elements.retry.addEventListener("click", () => {
   draft.revision += 1;
   markPending();

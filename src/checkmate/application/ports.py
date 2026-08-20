@@ -2,19 +2,24 @@
 
 from typing import Protocol, TypeVar
 
-_ReceiptInputT = TypeVar("_ReceiptInputT", contravariant=True)
-_ReceiptOutputT = TypeVar("_ReceiptOutputT", covariant=True)
+from checkmate.application.models import ExtractionResult, NormalizedReceiptImage
+
 _PdfInputT = TypeVar("_PdfInputT", contravariant=True)
 
 
-class ReceiptParser(Protocol[_ReceiptInputT, _ReceiptOutputT]):
-    """Parse one application-owned receipt image into an editable result.
+class ReceiptParser(Protocol):
+    """Parse one application-owned receipt image into editable suggestions."""
 
-    Milestone 3 supplies the concrete input and output values.
-    """
-
-    async def parse(self, image: _ReceiptInputT) -> _ReceiptOutputT:
+    async def parse(self, image: NormalizedReceiptImage) -> ExtractionResult:
         """Return an editable extraction result for a normalized image."""
+        ...
+
+
+class ReceiptImageNormalizer(Protocol):
+    """Validate and normalize untrusted encoded receipt-image bytes."""
+
+    def normalize(self, content: bytes) -> NormalizedReceiptImage:
+        """Return a safe metadata-free JPEG or raise a safe extraction error."""
         ...
 
 
