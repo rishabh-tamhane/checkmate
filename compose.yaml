@@ -1,0 +1,90 @@
+name: checkmate
+
+services:
+  app:
+    image: "${CHECKMATE_IMAGE:?Set CHECKMATE_IMAGE to the tested release tag}"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    platform: linux/amd64
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    environment:
+      LOG_LEVEL: info
+      OPENAI_API_KEY: "${OPENAI_API_KEY:?Load OPENAI_API_KEY before starting}"
+      PUBLIC_ORIGIN: https://checkmate.rishabhtamhane.com
+      REQUEST_CONCURRENCY_LIMIT: "32"
+    expose:
+      - "8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import json, urllib.request;
+          response = urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3);
+          assert response.status == 200;
+          assert json.load(response)['status'] == 'ok'
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    cpus: 2.0
+    mem_limit: 1g
+    pids_limit: 128
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - backend
+
+  ingress:
+    image: >-
+      ghcr.io/nginx/nginx-unprivileged:1.30.4-alpine3.24@sha256:44e36330f74d4f3a1d4e222acca9e23b401fb87811a7597024502bb759c4dd49
+    platform: linux/arm64
+    restart: unless-stopped
+    read_only: true
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - host_ip: 127.0.0.1
+        target: 8080
+        published: "${CHECKMATE_INGRESS_PORT:-8080}"
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: ./deploy/macos/nginx.conf
+        target: /etc/nginx/conf.d/default.conf
+        read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - --quiet
+        - --output-document=/dev/null
+        - "--header=Host: checkmate.rishabhtamhane.com"
+        - http://127.0.0.1:8080/health
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 5s
+    cpus: 0.5
+    mem_limit: 128m
+    pids_limit: 64
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge

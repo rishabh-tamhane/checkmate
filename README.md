@@ -77,12 +77,17 @@ The process reads these environment variables at startup:
 | `HOST` | `0.0.0.0` | Listen on every available network interface |
 | `PORT` | `8000` | Listening TCP port |
 | `LOG_LEVEL` | `info` | `critical`, `error`, `warning`, `info`, `debug`, or `trace` |
+| `PUBLIC_ORIGIN` | absent | Exact public HTTP(S) origin used for browser Origin validation |
+| `REQUEST_CONCURRENCY_LIMIT` | `32` | Maximum concurrent requests accepted by Uvicorn |
 | `OPENAI_API_KEY` | absent | Enables automatic receipt extraction through OpenAI |
 
-An invalid host, port, or log level stops startup with a safe configuration
-message. `OPENAI_API_KEY` is optional and must be supplied only through the
-process environment or a deployment secret store; it is never rendered or
-logged.
+An invalid host, port, log level, public origin, or concurrency limit stops
+startup with a safe configuration message. `PUBLIC_ORIGIN` is normally absent
+for local use; a reverse-proxied deployment sets it to its exact browser origin,
+such as `https://checkmate.example.com`, without a trailing slash. Proxy-header
+trust remains disabled. `OPENAI_API_KEY` is optional and must be supplied only
+through the process environment or a deployment secret store; it is never
+rendered or logged.
 
 Manual entry and deterministic splitting work without an OpenAI key. To enable
 receipt upload, create a project API key in the
@@ -162,14 +167,17 @@ calculation, the web process, or the health endpoint.
 
 ### Public deployment prerequisites
 
-The application container is only one part of a safe public deployment. Before
-exposing Checkmate to the internet, the selected ingress and hosting platform
-must provide HTTPS and HSTS, enforce the same 10 MiB upload and 256 KiB JSON
-body limits, rate-limit receipt extraction, cap per-instance and fleet request
-concurrency, and configure only the exact trusted proxy addresses. Configure
-OpenAI usage budgets or alerts as an independent cost control. These controls
-are deployment requirements; v0.1 does not select or configure a cloud host,
-domain, TLS provider, or public ingress.
+The application container is only one part of a safe public deployment. A
+deployment must provide HTTPS and HSTS, enforce the same 10 MiB upload and
+256 KiB JSON body limits, rate-limit receipt extraction, and cap request
+concurrency. Configure OpenAI usage budgets or alerts as an independent cost
+control. Never publish the application container directly.
+
+The approved v0.2 owner-only preview uses a loopback Docker Compose stack on
+macOS, Cloudflare Access, and a named Cloudflare Tunnel. See the
+[macOS host operations guide](deploy/macos/README.md) and the
+[v0.2 hosting requirements](docs/versions/v0.2-hosting/requirements.md). The Mac
+must remain powered, awake, online, logged in, and running Docker and the tunnel.
 
 ## Verification
 

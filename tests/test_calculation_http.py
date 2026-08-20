@@ -8,6 +8,7 @@ from contextlib import contextmanager
 import pytest
 from fastapi.testclient import TestClient
 
+from checkmate.config import Settings
 from checkmate.web.app import (
     JSON_BODY_LIMIT,
     SAME_ORIGIN_HEADER,
@@ -230,6 +231,36 @@ def test_custom_header_and_matching_origin_are_required() -> None:
     assert wrong_origin.status_code == 403
     assert wrong_origin.json()["error"]["code"] == "origin_not_allowed"
     assert matching_origin.status_code == 200
+
+
+def test_configured_public_origin_accepts_tunneled_https_requests() -> None:
+    settings = Settings(public_origin="https://checkmate.example.test")
+    with TestClient(create_app(settings)) as client:
+        accepted = client.post(
+            "/api/splits/calculate",
+            json=valid_payload(),
+            headers={
+                **REQUEST_HEADERS,
+                "Origin": "https://checkmate.example.test",
+            },
+        )
+        internal_origin = client.post(
+            "/api/splits/calculate",
+            json=valid_payload(),
+            headers={**REQUEST_HEADERS, "Origin": "http://testserver"},
+        )
+        trailing_slash = client.post(
+            "/api/splits/calculate",
+            json=valid_payload(),
+            headers={
+                **REQUEST_HEADERS,
+                "Origin": "https://checkmate.example.test/",
+            },
+        )
+
+    assert accepted.status_code == 200
+    assert internal_origin.status_code == 403
+    assert trailing_slash.status_code == 403
 
 
 def test_calculation_logging_excludes_request_and_response_values(

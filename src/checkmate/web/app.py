@@ -196,7 +196,7 @@ def create_app(
         summary="Extract editable fields from one restaurant receipt image",
     )
     async def extract_receipt(request: Request) -> Response:
-        origin_error = _same_origin_error(request)
+        origin_error = _same_origin_error(request, settings.public_origin)
         if origin_error is not None:
             return origin_error
         if extraction_service is None:
@@ -273,7 +273,7 @@ def create_app(
         summary="Calculate the current manual split draft",
     )
     async def calculate(request: Request) -> Response:
-        origin_error = _same_origin_error(request)
+        origin_error = _same_origin_error(request, settings.public_origin)
         if origin_error is not None:
             return origin_error
 
@@ -309,7 +309,7 @@ def create_app(
         summary="Generate a PDF from one independently finalized split draft",
     )
     async def generate_pdf(request: Request) -> Response:
-        origin_error = _same_origin_error(request)
+        origin_error = _same_origin_error(request, settings.public_origin)
         if origin_error is not None:
             return origin_error
 
@@ -377,6 +377,7 @@ def main() -> None:
         log_level=settings.log_level,
         access_log=False,
         proxy_headers=False,
+        limit_concurrency=settings.request_concurrency_limit,
         reload=False,
         server_header=False,
         workers=1,
@@ -408,7 +409,9 @@ async def _read_limited_body(request: Request, limit: int) -> bytes | None:
     return bytes(body)
 
 
-def _same_origin_error(request: Request) -> JSONResponse | None:
+def _same_origin_error(
+    request: Request, public_origin: str | None
+) -> JSONResponse | None:
     """Require the private browser header and validate Origin when supplied."""
     if request.headers.get(SAME_ORIGIN_HEADER) != SAME_ORIGIN_VALUE:
         return _safe_error_response(
@@ -418,8 +421,8 @@ def _same_origin_error(request: Request) -> JSONResponse | None:
             message="This request must come from the Checkmate application.",
         )
     origin = request.headers.get("origin")
-    expected_origin = str(request.base_url).rstrip("/")
-    if origin is not None and origin.rstrip("/") != expected_origin:
+    expected_origin = public_origin or str(request.base_url).rstrip("/")
+    if origin is not None and origin != expected_origin:
         return _safe_error_response(
             request,
             status_code=403,

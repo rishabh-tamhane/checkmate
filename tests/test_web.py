@@ -44,8 +44,8 @@ def test_application_shell_links_to_local_assets() -> None:
     assert page.headers["content-type"].startswith("text/html")
     assert "<main" in page.text
     assert 'id="page-title"' in page.text
-    assert 'href="http://testserver/static/checkmate.v1.css"' in page.text
-    assert 'src="http://testserver/static/checkmate.v1.js"' in page.text
+    assert 'href="/static/checkmate.v1.css"' in page.text
+    assert 'src="/static/checkmate.v1.js"' in page.text
     assert stylesheet.status_code == 200
     assert stylesheet.headers["content-type"].startswith("text/css")
     assert script.status_code == 200
@@ -141,6 +141,7 @@ def test_main_runs_one_uvicorn_process_without_proxy_trust(
     monkeypatch.setenv("HOST", "127.0.0.1")
     monkeypatch.setenv("PORT", "9123")
     monkeypatch.setenv("LOG_LEVEL", "warning")
+    monkeypatch.setenv("REQUEST_CONCURRENCY_LIMIT", "64")
 
     with patch("checkmate.web.app.uvicorn.run") as run:
         main()
@@ -153,6 +154,7 @@ def test_main_runs_one_uvicorn_process_without_proxy_trust(
         "log_level": "warning",
         "access_log": False,
         "proxy_headers": False,
+        "limit_concurrency": 64,
         "reload": False,
         "server_header": False,
         "workers": 1,
